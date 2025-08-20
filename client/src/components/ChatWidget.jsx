@@ -1,40 +1,83 @@
-import React, { useState } from "react";
-import { FaComments, FaTimes, FaPaperPlane, FaUser } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from "react";
+import { FaComments, FaTimes, FaPaperPlane, FaUser, FaRobot } from "react-icons/fa";
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Xin chào! Tôi có thể giúp gì cho bạn?",
+      text: "Xin chào! Tôi là trợ lý ảo của MuaSamViet. Tôi có thể giúp gì cho bạn?",
       sender: "bot",
       timestamp: new Date(),
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [suggestions, setSuggestions] = useState([
+    'Cách đăng ký tài khoản?',
+    'Phương thức thanh toán',
+    'Thời gian giao hàng',
+    'Chính sách đổi trả'
+  ]);
+  const messagesEndRef = useRef(null);
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  const handleSendMessage = () => {
+  // Auto scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async () => {
     if (inputMessage.trim()) {
-      const newMessage = {
+      const userMessage = {
         id: messages.length + 1,
         text: inputMessage,
         sender: "user",
         timestamp: new Date(),
       };
       
-      setMessages([...messages, newMessage]);
+      setMessages(prev => [...prev, userMessage]);
       setInputMessage("");
+      setIsTyping(true);
 
-      // Simulate bot response
-      setTimeout(() => {
-        const botResponse = {
+      try {
+        // Send message to chatbot API
+        const response = await fetch(`${API_BASE}/api/chatbot/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: inputMessage }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Simulate typing delay
+          setTimeout(() => {
+            const botResponse = {
+              id: messages.length + 2,
+              text: data.data.response,
+              sender: "bot",
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, botResponse]);
+            setIsTyping(false);
+          }, 1000);
+        } else {
+          throw new Error('Failed to get response');
+        }
+      } catch (error) {
+        console.error('Chatbot error:', error);
+        const errorResponse = {
           id: messages.length + 2,
-          text: "Cảm ơn bạn đã liên hệ! Nhân viên của chúng tôi sẽ phản hồi sớm nhất có thể.",
+          text: "Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau hoặc liên hệ hotline 1900-xxxx.",
           sender: "bot",
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, botResponse]);
-      }, 1000);
+        setMessages(prev => [...prev, errorResponse]);
+        setIsTyping(false);
+      }
     }
   };
 
@@ -42,6 +85,10 @@ const ChatWidget = () => {
     if (e.key === "Enter") {
       handleSendMessage();
     }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setInputMessage(suggestion);
   };
 
   return (
@@ -65,10 +112,10 @@ const ChatWidget = () => {
           {/* Header */}
           <div className="bg-orange-500 text-white p-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <FaUser className="text-xl" />
+              <FaRobot className="text-xl" />
               <div>
-                <h3 className="font-semibold">Hỗ trợ khách hàng</h3>
-                <p className="text-xs opacity-90">Trực tuyến</p>
+                <h3 className="font-semibold">Trợ lý ảo MuaSamViet</h3>
+                <p className="text-xs opacity-90">AI Assistant</p>
               </div>
             </div>
             <button
@@ -103,7 +150,43 @@ const ChatWidget = () => {
                 </div>
               </div>
             ))}
+            
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 px-3 py-2 rounded-lg">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-sm text-gray-600">Đang nhập...</span>
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
           </div>
+
+          {/* Suggestions */}
+          {messages.length <= 1 && (
+            <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+              <p className="text-xs text-gray-600 mb-2">Gợi ý câu hỏi:</p>
+              <div className="flex flex-wrap gap-1">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="text-xs bg-white border border-gray-300 rounded-full px-3 py-1 hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div className="p-4 border-t border-gray-200">

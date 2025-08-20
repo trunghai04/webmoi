@@ -1,7 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { AuthContext } from "../../../context/AuthContext";
+import useNotification from "../../../hooks/useNotification";
+import NotificationPopup from "../../../components/NotificationPopup";
 
 const ChangePassword = () => {
+  const { user } = useContext(AuthContext);
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
+  
+  // ChangePassword component loaded
+  
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -28,10 +36,74 @@ const ChangePassword = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    
+    return minLength && hasUppercase && hasLowercase && hasNumber;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle password change logic
-    console.log("Changing password:", formData);
+    
+    // Validation
+    if (!formData.currentPassword) {
+      showWarning('Vui lòng nhập mật khẩu hiện tại');
+      return;
+    }
+    
+    if (!formData.newPassword) {
+      showWarning('Vui lòng nhập mật khẩu mới');
+      return;
+    }
+    
+    if (!validatePassword(formData.newPassword)) {
+      showWarning('Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số');
+      return;
+    }
+    
+    if (formData.newPassword !== formData.confirmPassword) {
+      showWarning('Mật khẩu xác nhận không khớp');
+      return;
+    }
+    
+    if (formData.currentPassword === formData.newPassword) {
+      showWarning('Mật khẩu mới phải khác mật khẩu hiện tại');
+      return;
+    }
+
+    try {
+      console.log("Changing password:", formData);
+      
+      // Simulate API call
+      const response = await fetch('http://localhost:5000/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('msv_auth')).token}`
+        },
+        body: JSON.stringify({
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword
+        })
+      });
+      
+      if (response.ok) {
+        showSuccess('Mật khẩu đã được thay đổi thành công!');
+        setFormData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: ""
+        });
+      } else {
+        showError('Mật khẩu hiện tại không đúng hoặc có lỗi xảy ra');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      showError('Có lỗi xảy ra khi đổi mật khẩu');
+    }
   };
 
   return (
@@ -129,6 +201,16 @@ const ChangePassword = () => {
           </button>
         </div>
       </form>
+      
+      {/* Notification Popup */}
+      <NotificationPopup
+        isOpen={notification.isOpen}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        duration={notification.duration}
+      />
     </div>
   );
 };

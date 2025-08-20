@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaGoogle, FaFacebook } from "react-icons/fa";
 import { AuthContext } from "../../context/AuthContext";
@@ -20,6 +20,7 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Handle scroll effect
   useEffect(() => {
@@ -39,8 +40,15 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     setIsLoading(true);
 
     try {
@@ -55,11 +63,16 @@ const Login = () => {
         navigate('/');
       }
     } catch (error) {
-      toast.error("Email/Số điện thoại hoặc mật khẩu không đúng!");
+      if (error.message.includes('Too many requests')) {
+        toast.error("Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút!");
+      } else {
+        toast.error("Email/Số điện thoại hoặc mật khẩu không đúng!");
+      }
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
+  }, [formData.emailOrPhone, formData.password, login, navigate, isSubmitting]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -180,7 +193,7 @@ const Login = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isSubmitting}
                   className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}

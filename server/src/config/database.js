@@ -30,5 +30,7 @@ const testConnection = async () => {
 
 module.exports = {
   pool,
-  testConnection
+  testConnection,
+  query: pool.query.bind(pool),
+  getConnection: () => pool.getConnection()
 };

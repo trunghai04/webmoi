@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { AuthContext } from "../../../context/AuthContext";
 
 const PersonalInfo = () => {
+  const { user } = useContext(AuthContext);
+  
   const [formData, setFormData] = useState({
-    fullName: "",
-    cccdNumber: "",
-    address: ""
+    fullName: user?.fullName || user?.name || "",
+    cccdNumber: user?.cccdNumber || "",
+    address: user?.address || ""
   });
 
   const handleChange = (e) => {

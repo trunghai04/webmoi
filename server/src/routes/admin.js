@@ -13,8 +13,10 @@ router.get('/dashboard/stats', async (req, res) => {
     const [[{ totalPartners }]] = await pool.execute("SELECT COUNT(*) as totalPartners FROM users WHERE role = 'partner'");
     const [[{ totalProducts }]] = await pool.execute('SELECT COUNT(*) as totalProducts FROM products WHERE is_active = 1');
     const [[{ totalOrders }]] = await pool.execute('SELECT COUNT(*) as totalOrders FROM orders');
-    const [[{ pendingFeedback }]] = await pool.execute("SELECT COUNT(*) as pendingFeedback FROM feedback WHERE status = 'pending'");
-    const [[{ totalRevenue }]] = await pool.execute('SELECT COALESCE(SUM(final_amount),0) as totalRevenue FROM orders WHERE payment_status = "paid"');
+    // Feedback table may not exist; default to 0
+    const pendingFeedback = 0;
+    // Orders table does not have payment_status/final_amount; sum total as revenue proxy
+    const [[{ totalRevenue }]] = await pool.execute('SELECT COALESCE(SUM(total),0) as totalRevenue FROM orders');
 
     res.json({
       success: true,
@@ -36,12 +38,15 @@ router.get('/dashboard/stats', async (req, res) => {
 // Users list
 router.get('/users', async (req, res) => {
   try {
+    console.log('Admin get users request:', req.query);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
     const role = req.query.role && req.query.role !== 'all' ? req.query.role : null;
 
+    console.log('Calling User.getAll with:', { page, limit, search, role });
     const result = await User.getAll(page, limit, search, role);
+    console.log('User.getAll result:', result);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Admin get users error:', error);

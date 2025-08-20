@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import { 
   FaSearch, 
   FaChevronDown, 
@@ -11,23 +11,64 @@ import {
   FaPaperPlane,
   FaSmile,
   FaPaperclip,
-  FaEllipsisH
+  FaEllipsisH,
+  FaBell,
+  FaTimes,
+  FaPhone,
+  FaVideo
 } from "react-icons/fa";
+import io from "socket.io-client";
 import { AuthContext } from "../../context/AuthContext";
 import { CartContext } from "../../context/CartContext";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import FloatingActions from "../../components/FloatingActions";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const Chat = () => {
   const { isAuthenticated, user } = useContext(AuthContext);
   const { cartItems } = useContext(CartContext);
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedChat, setSelectedChat] = useState(null);
   const [filterType, setFilterType] = useState("all");
   const [messageInput, setMessageInput] = useState("");
+  const [chatRooms, setChatRooms] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  
+  const socketRef = useRef();
+  const messagesEndRef = useRef();
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Helper function to get token
+  const getToken = () => {
+    const stored = localStorage.getItem('msv_auth');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return parsed.token;
+      } catch (error) {
+        console.error('Error parsing stored auth:', error);
+      }
+    }
+    return null;
+  };
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để sử dụng chat');
+      navigate('/login');
+      return;
+    }
+  }, [isAuthenticated, navigate]);
 
   // Handle scroll effect
   useEffect(() => {
@@ -39,6 +80,180 @@ const Chat = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      socketRef.current = io(API_BASE, {
+        withCredentials: true
+      });
+
+      // Join with user data
+      socketRef.current.emit('join', {
+        userId: user.id,
+        username: user.username,
+        role: user.role
+      });
+
+      // Listen for new messages
+      socketRef.current.on('new_message', (message) => {
+        setMessages(prev => [...prev, message]);
+        scrollToBottom();
+        
+        // Play notification sound or show toast
+        if (message.sender_id !== user.id) {
+          toast.info(`Tin nhắn mới từ ${message.sender_name}`);
+        }
+      });
+
+      // Listen for admin notifications
+      socketRef.current.on('admin_notification', (notification) => {
+        setNotifications(prev => [notification, ...prev]);
+        toast.success(`Thông báo: ${notification.title}`, {
+          autoClose: 5000
+        });
+      });
+
+      // Listen for typing indicators
+      socketRef.current.on('user_typing', (data) => {
+        if (data.userId !== user.id) {
+          setTypingUsers(prev => {
+            if (data.isTyping) {
+              return [...prev.filter(u => u.userId !== data.userId), data];
+            } else {
+              return prev.filter(u => u.userId !== data.userId);
+            }
+          });
+        }
+      });
+
+      // Listen for errors
+      socketRef.current.on('error', (error) => {
+        toast.error(error.message);
+      });
+
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+      };
+    }
+  }, [isAuthenticated, user, API_BASE]);
+
+  // Load chat rooms
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadChatRooms();
+      loadNotifications();
+    }
+  }, [isAuthenticated]);
+
+  // Load messages when chat room is selected
+  useEffect(() => {
+    if (selectedChat && selectedChat.id) {
+      loadMessages(selectedChat.id);
+      
+      // Join the room
+      if (socketRef.current) {
+        socketRef.current.emit('join_room', selectedChat.id);
+      }
+    }
+  }, [selectedChat]);
+
+  // Auto scroll to bottom when new messages arrive
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const loadChatRooms = async () => {
+    try {
+      const token = getToken();
+      
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/chat/rooms`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setChatRooms(data.data.rooms);
+      } else if (response.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn');
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Error loading chat rooms:', error);
+    }
+  };
+
+  const loadMessages = async (roomId) => {
+    try {
+      const token = getToken();
+      
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/chat/rooms/${roomId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.data.messages);
+      } else if (response.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn');
+        navigate('/login');
+      } else if (response.status === 403) {
+        toast.error('Bạn không có quyền truy cập phòng chat này');
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
+
+  const loadNotifications = async () => {
+    try {
+      const token = getToken();
+      
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/chat/notifications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.data.notifications);
+      } else if (response.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn');
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
 
   // Mock chat data
   const chatList = [
@@ -84,11 +299,116 @@ const Chat = () => {
     }
   ];
 
-  const handleSendMessage = () => {
-    if (messageInput.trim() && selectedChat) {
-      // Here you would typically send the message to your backend
-      console.log("Sending message:", messageInput);
+  const handleSendMessage = async () => {
+    if (messageInput.trim() && selectedChat && socketRef.current) {
+      const messageData = {
+        roomId: selectedChat.id,
+        content: messageInput.trim(),
+        type: 'text'
+      };
+
+      // Send via Socket.IO for real-time
+      socketRef.current.emit('send_message', messageData);
+      
+      // Also send via HTTP API as backup
+      try {
+        const token = getToken();
+        
+        if (!token) {
+          toast.error('Vui lòng đăng nhập lại');
+          navigate('/login');
+          return;
+        }
+
+        await fetch(`${API_BASE}/api/chat/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(messageData)
+        });
+      } catch (error) {
+        console.error('Error sending message via API:', error);
+      }
+
       setMessageInput("");
+      
+      // Stop typing indicator
+      if (isTyping) {
+        setIsTyping(false);
+        socketRef.current.emit('typing', { roomId: selectedChat.id, isTyping: false });
+      }
+    }
+  };
+
+  const handleTyping = (e) => {
+    setMessageInput(e.target.value);
+    
+    if (selectedChat && socketRef.current) {
+      if (!isTyping && e.target.value.length > 0) {
+        setIsTyping(true);
+        socketRef.current.emit('typing', { roomId: selectedChat.id, isTyping: true });
+      } else if (isTyping && e.target.value.length === 0) {
+        setIsTyping(false);
+        socketRef.current.emit('typing', { roomId: selectedChat.id, isTyping: false });
+      }
+    }
+  };
+
+  const createChatWithPartner = async (partnerId) => {
+    try {
+      const token = getToken();
+      
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/chat/rooms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ partnerId })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedChat(data.data.room);
+        loadChatRooms(); // Refresh room list
+        return data.data.room;
+      }
+    } catch (error) {
+      console.error('Error creating chat room:', error);
+      toast.error('Không thể tạo phòng chat');
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const token = getToken();
+      
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        navigate('/login');
+        return;
+      }
+
+      await fetch(`${API_BASE}/api/chat/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
   };
 
@@ -137,13 +457,23 @@ const Chat = () => {
           <div className="w-1/3 border-r border-gray-200 flex flex-col">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-red-500">Chat (1)</h2>
+              <h2 className="text-lg font-semibold text-red-500">
+                Chat ({chatRooms.length})
+              </h2>
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <FaExternalLinkAlt className="text-gray-600 text-sm" />
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+                >
+                  <FaBell className="text-gray-600 text-sm" />
+                  {notifications.filter(n => !n.is_read).length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {notifications.filter(n => !n.is_read).length}
+                    </span>
+                  )}
                 </button>
                 <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <FaDownload className="text-gray-600 text-sm" />
+                  <FaExternalLinkAlt className="text-gray-600 text-sm" />
                 </button>
               </div>
             </div>
@@ -174,9 +504,58 @@ const Chat = () => {
               </div>
             </div>
 
+            {/* Notifications Panel */}
+            {showNotifications && (
+              <div className="border-b border-gray-200 max-h-48 overflow-y-auto bg-gray-50">
+                <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-800">Thông báo</h3>
+                  <button 
+                    onClick={() => setShowNotifications(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+                <div className="max-h-32 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      Không có thông báo mới
+                    </div>
+                  ) : (
+                    notifications.slice(0, 5).map((notification) => (
+                      <div 
+                        key={notification.id}
+                        onClick={() => markNotificationAsRead(notification.id)}
+                        className={`p-3 border-b border-gray-200 cursor-pointer hover:bg-white transition-colors ${
+                          !notification.is_read ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm text-gray-900">
+                              {notification.title}
+                            </h4>
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                              {notification.content}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(notification.created_at).toLocaleString('vi-VN')}
+                            </p>
+                          </div>
+                          {!notification.is_read && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Chat List */}
             <div className="flex-1 overflow-y-auto">
-              {chatList.map((chat) => (
+              {(chatRooms.length > 0 ? chatRooms : chatList).map((chat) => (
                 <div
                   key={chat.id}
                   onClick={() => setSelectedChat(chat)}
@@ -247,17 +626,60 @@ const Chat = () => {
                 {/* Chat Messages */}
                 <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
                   <div className="space-y-4">
-                    {/* Example messages */}
-                    <div className="flex justify-end">
-                      <div className="bg-orange-500 text-white px-4 py-2 rounded-lg max-w-xs">
-                        <p className="text-sm">Xin chào! Tôi cần hỗ trợ về sản phẩm</p>
+                    {messages.length === 0 ? (
+                      <div className="text-center text-gray-500 py-8">
+                        <p>Chưa có tin nhắn nào</p>
+                        <p className="text-sm mt-1">Hãy bắt đầu cuộc trò chuyện!</p>
                       </div>
-                    </div>
-                    <div className="flex justify-start">
-                      <div className="bg-white px-4 py-2 rounded-lg max-w-xs shadow-sm">
-                        <p className="text-sm">Chào bạn! Tôi có thể giúp gì cho bạn?</p>
+                    ) : (
+                      messages.map((message) => (
+                        <div 
+                          key={message.id}
+                          className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.sender_id === user?.id 
+                              ? 'bg-orange-500 text-white' 
+                              : 'bg-white shadow-sm'
+                          }`}>
+                            {message.sender_id !== user?.id && (
+                              <p className="text-xs text-gray-500 mb-1">
+                                {message.sender_name}
+                              </p>
+                            )}
+                            <p className="text-sm">{message.content}</p>
+                            <p className={`text-xs mt-1 ${
+                              message.sender_id === user?.id ? 'text-orange-100' : 'text-gray-400'
+                            }`}>
+                              {new Date(message.created_at).toLocaleTimeString('vi-VN', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    
+                    {/* Typing Indicator */}
+                    {typingUsers.length > 0 && (
+                      <div className="flex justify-start">
+                        <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
+                          <div className="flex items-center space-x-1">
+                            <span className="text-sm text-gray-500">
+                              {typingUsers[0].username} đang nhập...
+                            </span>
+                            <div className="flex space-x-1">
+                              <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                              <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                              <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
                   </div>
                 </div>
 
@@ -270,7 +692,7 @@ const Chat = () => {
                     <div className="flex-1 relative">
                       <textarea
                         value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
+                        onChange={handleTyping}
                         onKeyPress={handleKeyPress}
                         placeholder="Nhập tin nhắn..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"

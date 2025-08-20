@@ -26,12 +26,25 @@ const ForgotPassword = () => {
     setError("");
 
     try {
-      // Mock API call - replace with actual forgot password API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setIsSubmitted(true);
-      toast.success("Email đặt lại mật khẩu đã được gửi!");
+      const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsSubmitted(true);
+        toast.success("Email đặt lại mật khẩu đã được gửi!");
+      } else {
+        setError(data.message || "Email không tồn tại trong hệ thống");
+        toast.error(data.message || "Gửi email thất bại!");
+      }
     } catch (error) {
+      console.error('Forgot password error:', error);
       setError("Có lỗi xảy ra. Vui lòng thử lại.");
       toast.error("Gửi email thất bại!");
     } finally {

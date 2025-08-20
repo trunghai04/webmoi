@@ -1,17 +1,23 @@
-import React, { useState } from "react";
-import { FaCamera, FaQuestionCircle } from "react-icons/fa";
+import React, { useState, useContext } from "react";
+import { FaCamera, FaQuestionCircle, FaUser } from "react-icons/fa";
+import { AuthContext } from "../../../context/AuthContext";
+import useNotification from "../../../hooks/useNotification";
+import NotificationPopup from "../../../components/NotificationPopup";
 
 const Profile = () => {
+  const { user } = useContext(AuthContext);
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
+  
   const [formData, setFormData] = useState({
-    username: "ngtrunghi927",
-    name: "Đăng",
-    email: "",
-    phone: "*********02",
-    gender: "",
-    birthDate: "**/**/2004"
+    username: user?.username || "",
+    name: user?.name || user?.username || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    gender: user?.gender || "",
+    birthDate: user?.birthDate || ""
   });
 
-  const [avatar, setAvatar] = useState(null);
+  const [avatar, setAvatar] = useState(user?.avatar || null);
 
   const handleChange = (e) => {
     setFormData({
@@ -27,9 +33,29 @@ const Profile = () => {
     }
   };
 
-  const handleSave = () => {
-    // Handle save logic
-    console.log("Saving profile:", formData);
+  const handleSave = async () => {
+    try {
+      console.log("Saving profile:", formData);
+      
+      // Simulate API call
+      const response = await fetch('http://localhost:5000/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('msv_auth')).token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (response.ok) {
+        showSuccess('Hồ sơ đã được cập nhật thành công!');
+      } else {
+        showError('Có lỗi xảy ra khi cập nhật hồ sơ');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      showError('Có lỗi xảy ra khi cập nhật hồ sơ');
+    }
   };
 
   return (
@@ -182,6 +208,16 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      
+      {/* Notification Popup */}
+      <NotificationPopup
+        isOpen={notification.isOpen}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        duration={notification.duration}
+      />
     </div>
   );
 };

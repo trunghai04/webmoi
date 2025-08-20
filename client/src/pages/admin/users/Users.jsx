@@ -26,10 +26,10 @@ const Users = () => {
         role: filterRole !== "all" ? filterRole : ""
       });
 
-      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const API_BASE = 'http://localhost:5000';
       const response = await fetch(`${API_BASE}/api/admin/users?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('msv_auth') ? JSON.parse(localStorage.getItem('msv_auth')).token : ''}`
         }
       });
 
@@ -52,11 +52,11 @@ const Users = () => {
     }
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const API_BASE = 'http://localhost:5000';
       const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('msv_auth') ? JSON.parse(localStorage.getItem('msv_auth')).token : ''}`
         }
       });
 
@@ -74,12 +74,12 @@ const Users = () => {
 
   const handleUpdateUserRole = async (userId, newRole) => {
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const API_BASE = 'http://localhost:5000';
       const response = await fetch(`${API_BASE}/api/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('msv_auth') ? JSON.parse(localStorage.getItem('msv_auth')).token : ''}`
         },
         body: JSON.stringify({ role: newRole })
       });

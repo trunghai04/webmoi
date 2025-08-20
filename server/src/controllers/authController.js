@@ -13,10 +13,13 @@ const generateToken = (userId) => {
 // Register new user
 const register = async (req, res) => {
   try {
+    console.log('Registration request body:', req.body);
     const { username, email, phone, password, full_name, birth_date, address } = req.body;
 
     // Check if user already exists
+    console.log('Checking if user exists with email:', email);
     const existingUser = await User.findByEmailOrPhone(email);
+    console.log('Existing user result:', existingUser);
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -25,7 +28,9 @@ const register = async (req, res) => {
     }
 
     // Check if username exists
+    console.log('Checking if username exists:', username);
     const existingUsername = await User.findByUsername(username);
+    console.log('Existing username result:', existingUsername);
     if (existingUsername) {
       return res.status(400).json({
         success: false,
@@ -34,6 +39,7 @@ const register = async (req, res) => {
     }
 
     // Create new user
+    console.log('Creating user with data:', { username, email, phone, full_name });
     const userId = await User.create({
       username,
       email,
@@ -43,6 +49,7 @@ const register = async (req, res) => {
       birth_date,
       address
     });
+    console.log('User created with ID:', userId);
 
     // Get user data (without password)
     const user = await User.findById(userId);
@@ -50,9 +57,16 @@ const register = async (req, res) => {
     // Generate token
     const token = generateToken(userId);
 
-    // Send welcome email
-    const { subject, html } = emailTemplates.welcome(username);
-    await sendEmail(email, subject, html);
+    // Send welcome email (skip in development if email not configured)
+    console.log('Attempting to send welcome email...');
+    try {
+      const { subject, html } = emailTemplates.welcome(username);
+      const emailResult = await sendEmail(email, subject, html);
+      console.log('Email result:', emailResult);
+    } catch (emailError) {
+      console.log('Email sending failed, but registration continues:', emailError.message);
+      // Không throw error để registration vẫn tiếp tục
+    }
 
     res.status(201).json({
       success: true,
@@ -72,9 +86,11 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Register error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Đăng ký thất bại. Vui lòng thử lại sau.'
+      message: 'Đăng ký thất bại. Vui lòng thử lại sau.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -89,24 +105,16 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Email/số điện thoại hoặc mật khẩu không đúng'
-      });
-    }
-
-    // Check if user is active
-    if (!user.is_active) {
-      return res.status(401).json({
-        success: false,
-        message: 'Tài khoản đã bị khóa'
+        message: 'Email/Số điện thoại hoặc mật khẩu không đúng!'
       });
     }
 
     // Verify password
-    const isPasswordValid = await User.verifyPassword(user, password);
-    if (!isPasswordValid) {
+    const isValidPassword = await User.verifyPassword(user, password);
+    if (!isValidPassword) {
       return res.status(401).json({
         success: false,
-        message: 'Email/số điện thoại hoặc mật khẩu không đúng'
+        message: 'Email/Số điện thoại hoặc mật khẩu không đúng!'
       });
     }
 
@@ -142,23 +150,34 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy người dùng'
+        message: 'User not found'
       });
     }
 
     res.json({
       success: true,
-      data: { user }
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          full_name: user.full_name,
+          role: user.role,
+          avatar: user.avatar,
+          birth_date: user.birth_date,
+          address: user.address
+        }
+      }
     });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi server. Vui lòng thử lại sau.'
+      message: 'Server error'
     });
   }
 };
@@ -166,8 +185,11 @@ const getProfile = async (req, res) => {
 // Update user profile
 const updateProfile = async (req, res) => {
   try {
+    console.log('Update profile request body:', req.body);
     const { full_name, phone, birth_date, address } = req.body;
-
+    
+    console.log('Extracted data:', { full_name, phone, birth_date, address });
+    
     const success = await User.updateProfile(req.user.id, {
       full_name,
       phone,
@@ -178,23 +200,76 @@ const updateProfile = async (req, res) => {
     if (!success) {
       return res.status(400).json({
         success: false,
-        message: 'Cập nhật thông tin thất bại'
+        message: 'Cập nhật thất bại'
       });
     }
 
-    // Get updated user data
-    const user = await User.findById(req.user.id);
-
     res.json({
       success: true,
-      message: 'Cập nhật thông tin thành công!',
-      data: { user }
+      message: 'Cập nhật thành công!'
     });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
-      message: 'Cập nhật thông tin thất bại. Vui lòng thử lại sau.'
+      message: 'Server error'
+    });
+  }
+};
+
+// Update user avatar
+const updateAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Không có file được upload'
+      });
+    }
+
+    // Create avatar path relative to uploads directory
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    
+    const success = await User.updateAvatar(req.user.id, avatarPath);
+    if (!success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cập nhật avatar thất bại'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Cập nhật avatar thành công!',
+      data: {
+        avatar: avatarPath
+      }
+    });
+  } catch (error) {
+    console.error('Update avatar error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// Update notification settings
+const updateNotificationSettings = async (req, res) => {
+  try {
+    const { emailNotifications, smsNotifications, pushNotifications } = req.body;
+    
+    // For now, just return success since we don't have notification settings table
+    // TODO: Implement notification settings in database
+    res.json({
+      success: true,
+      message: 'Cập nhật cài đặt thông báo thành công!'
+    });
+  } catch (error) {
+    console.error('Update notification settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 };
@@ -206,10 +281,16 @@ const changePassword = async (req, res) => {
 
     // Get user with password
     const user = await User.findByEmailOrPhone(req.user.email);
-    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
     // Verify current password
-    const isCurrentPasswordValid = await User.verifyPassword(user, currentPassword);
-    if (!isCurrentPasswordValid) {
+    const isValidPassword = await User.verifyPassword(user, currentPassword);
+    if (!isValidPassword) {
       return res.status(400).json({
         success: false,
         message: 'Mật khẩu hiện tại không đúng'
@@ -218,7 +299,6 @@ const changePassword = async (req, res) => {
 
     // Update password
     const success = await User.changePassword(req.user.id, newPassword);
-    
     if (!success) {
       return res.status(400).json({
         success: false,
@@ -234,7 +314,7 @@ const changePassword = async (req, res) => {
     console.error('Change password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Đổi mật khẩu thất bại. Vui lòng thử lại sau.'
+      message: 'Server error'
     });
   }
 };
@@ -244,38 +324,58 @@ const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Find user by email
     const user = await User.findByEmail(email);
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy tài khoản với email này'
+        message: 'Email không tồn tại trong hệ thống'
       });
     }
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
 
-    // Save reset token to database
-    await User.createPasswordResetToken(email, resetToken, resetTokenExpires);
-
-    // Create reset link
-    const resetLink = `${process.env.CORS_ORIGIN}/auth/reset-password?token=${resetToken}`;
+    const success = await User.createPasswordResetToken(email, resetToken, resetTokenExpires);
+    if (!success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể tạo token reset'
+      });
+    }
 
     // Send reset email
-    const { subject, html } = emailTemplates.resetPassword(resetLink);
-    await sendEmail(email, subject, html);
+    try {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const resetUrl = `${clientUrl}/auth/reset-password?token=${resetToken}`;
+      const { subject, html } = emailTemplates.resetPassword(user.username, resetUrl);
+      const emailResult = await sendEmail(email, subject, html);
+      
+      // If email is disabled in development, still return success
+      if (emailResult.disabled) {
+        console.log('Email disabled, but reset token created successfully');
+        console.log('Reset URL for testing:', resetUrl);
+      }
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Don't return error if email is disabled
+      if (process.env.EMAIL_ENABLED !== 'false') {
+        return res.status(500).json({
+          success: false,
+          message: 'Không thể gửi email reset password'
+        });
+      }
+    }
 
     res.json({
       success: true,
-      message: 'Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.'
+      message: 'Email reset password đã được gửi!'
     });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Gửi email đặt lại mật khẩu thất bại. Vui lòng thử lại sau.'
+      message: 'Server error'
     });
   }
 };
@@ -285,44 +385,86 @@ const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    // Find user by reset token
     const user = await User.findByResetToken(token);
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn'
+        message: 'Token không hợp lệ hoặc đã hết hạn'
       });
     }
 
-    // Reset password
     const success = await User.resetPassword(token, newPassword);
-    
     if (!success) {
       return res.status(400).json({
         success: false,
-        message: 'Đặt lại mật khẩu thất bại'
+        message: 'Reset password thất bại'
       });
     }
 
     res.json({
       success: true,
-      message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập với mật khẩu mới.'
+      message: 'Reset password thành công!'
     });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Đặt lại mật khẩu thất bại. Vui lòng thử lại sau.'
+      message: 'Server error'
     });
   }
 };
 
-// Logout (client-side token removal)
+// Verify token
+const verifyToken = async (req, res) => {
+  try {
+    // If we reach here, the token is valid (verifyToken middleware passed) and req.user is populated
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          full_name: user.full_name,
+          role: user.role,
+          avatar: user.avatar
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Verify token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// Logout (client-side handles token removal)
 const logout = async (req, res) => {
-  res.json({
-    success: true,
-    message: 'Đăng xuất thành công!'
-  });
+  try {
+    // Server-side logout is stateless with JWT
+    // Client should remove token from localStorage
+    res.json({
+      success: true,
+      message: 'Đăng xuất thành công!'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
 };
 
 module.exports = {
@@ -330,8 +472,11 @@ module.exports = {
   login,
   getProfile,
   updateProfile,
+  updateAvatar,
+  updateNotificationSettings,
   changePassword,
   forgotPassword,
   resetPassword,
+  verifyToken,
   logout
 };

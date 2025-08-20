@@ -1,16 +1,22 @@
 import React, { useContext, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaTrash, FaSearch, FaHeart, FaChevronDown, FaTruck, FaGift, FaCoins } from "react-icons/fa";
 import { CartContext } from "../../context/CartContext";
+import { AuthContext } from "../../context/AuthContext";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { toast } from "react-toastify";
+
 
 const Cart = () => {
+  const navigate = useNavigate();
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
+  const { isAuthenticated, isReady } = useContext(AuthContext);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
 
   // Group items by shop
   const groupedItems = cartItems.reduce((acc, item) => {
@@ -57,6 +63,50 @@ const Cart = () => {
       removeFromCart(itemId);
     });
     setSelectedItems(new Set());
+  };
+
+  const handleCheckout = async () => {
+    console.log('handleCheckout called');
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('isReady:', isReady);
+    console.log('selectedItems:', selectedItems);
+    console.log('cartItems:', cartItems);
+    
+    if (!isReady) {
+      console.log('Auth not ready yet, waiting...');
+      toast.info('Đang kiểm tra đăng nhập...');
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      toast.error('Vui lòng đăng nhập để mua hàng');
+      navigate('/auth/login', { state: { from: '/cart' } });
+      return;
+    }
+    
+    if (selectedItems.size === 0) {
+      console.log('No items selected');
+      toast.error('Vui lòng chọn sản phẩm để mua hàng');
+      return;
+    }
+    
+    try {
+      // Lọc các sản phẩm đã chọn và chuyển sang checkout
+      const selectedItemsList = cartItems.filter(item => selectedItems.has(item.id));
+      console.log('Selected items list:', selectedItemsList);
+      
+      // Lưu thông tin sản phẩm đã chọn vào localStorage
+      localStorage.setItem('checkoutItems', JSON.stringify(selectedItemsList));
+      console.log('Saved to localStorage successfully');
+      
+      // Chuyển thẳng sang trang checkout
+      console.log('Navigating to checkout...');
+      navigate('/checkout');
+    } catch (error) {
+      console.error('Error in handleCheckout:', error);
+      toast.error('Có lỗi xảy ra khi mua hàng');
+    }
   };
 
   const selectedItemsList = cartItems.filter(item => selectedItems.has(item.id));
@@ -326,6 +376,7 @@ const Cart = () => {
                     </div>
                   </div>
                   <button
+                    onClick={handleCheckout}
                     disabled={selectedItems.size === 0}
                     className="w-full bg-orange-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >

@@ -12,7 +12,8 @@ import {
   FaStore,
   FaClipboardList,
   FaHeadset,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaBell
 } from "react-icons/fa";
 import { AuthContext } from "../../context/AuthContext";
 import { toast } from "react-toastify";
@@ -25,9 +26,14 @@ import Feedback from "./feedback/Feedback";
 import Support from "./support/Support";
 import Partners from "./partners/Partners";
 import Categories from "./categories/Categories";
+import BankSettings from "./BankSettings";
+import Banners from "./Banners";
 
 const AdminDashboard = () => {
   const { user, isReady, logout } = useContext(AuthContext);
+  
+  // Debug auth state
+  console.log('AdminDashboard - Auth state:', { user, isReady });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -37,8 +43,17 @@ const AdminDashboard = () => {
     pendingFeedback: 0,
     activePartners: 0
   });
+  const [notificationData, setNotificationData] = useState({
+    type: 'system',
+    title: '',
+    content: ''
+  });
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   useEffect(() => {
+    // Only run when auth is ready and user is loaded
+    if (!isReady) return;
+    
     // Check if user is admin
     if (!user || user.role !== 'admin') {
       toast.error("Bạn không có quyền truy cập trang admin!");
@@ -47,14 +62,15 @@ const AdminDashboard = () => {
 
     // Fetch dashboard stats
     fetchDashboardStats();
-  }, [user]);
+  }, [user, isReady]);
 
   const fetchDashboardStats = async () => {
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const API_BASE = 'http://localhost:5000';
+      const token = localStorage.getItem('msv_auth') ? JSON.parse(localStorage.getItem('msv_auth')).token : '';
       const response = await fetch(`${API_BASE}/api/admin/dashboard/stats`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -72,6 +88,44 @@ const AdminDashboard = () => {
     toast.success("Đăng xuất thành công!");
   };
 
+  const handleBroadcastNotification = async (e) => {
+    e.preventDefault();
+    
+    if (!notificationData.title || !notificationData.content) {
+      toast.error("Vui lòng điền đầy đủ thông tin!");
+      return;
+    }
+
+    setSendingNotification(true);
+    
+    try {
+      const API_BASE = 'http://localhost:5000';
+      const token = localStorage.getItem('msv_auth') ? JSON.parse(localStorage.getItem('msv_auth')).token : '';
+      const response = await fetch(`${API_BASE}/api/chat/admin/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(notificationData)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Đã gửi thông báo đến ${data.message.split(' ')[4]} người dùng!`);
+        setNotificationData({ type: 'system', title: '', content: '' });
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Không thể gửi thông báo!");
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      toast.error("Lỗi kết nối server!");
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
   if (!isReady) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -80,7 +134,7 @@ const AdminDashboard = () => {
     );
   }
 
-  if (!user || user.role !== 'admin') {
+  if (isReady && (!user || user.role !== 'admin')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -104,7 +158,8 @@ const AdminDashboard = () => {
     { id: "orders", label: "Đơn hàng", icon: FaShoppingCart },
     { id: "feedback", label: "Phản hồi", icon: FaComments },
     { id: "support", label: "Hỗ trợ", icon: FaHeadset },
-    { id: "settings", label: "Cài đặt", icon: FaCog }
+    { id: "settings", label: "Cài đặt", icon: FaCog },
+    { id: "banners", label: "Banner", icon: FaClipboardList }
   ];
 
   return (
@@ -236,6 +291,74 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
+                {/* Broadcast Notification Panel */}
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    Gửi Thông Báo Toàn Hệ Thống
+                  </h2>
+                  <form onSubmit={handleBroadcastNotification} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Loại thông báo
+                      </label>
+                      <select
+                        value={notificationData.type}
+                        onChange={(e) => setNotificationData({...notificationData, type: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="system">Hệ thống</option>
+                        <option value="promotion">Khuyến mãi</option>
+                        <option value="order">Đơn hàng</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tiêu đề
+                      </label>
+                      <input
+                        type="text"
+                        value={notificationData.title}
+                        onChange={(e) => setNotificationData({...notificationData, title: e.target.value})}
+                        placeholder="Nhập tiêu đề thông báo..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nội dung
+                      </label>
+                      <textarea
+                        value={notificationData.content}
+                        onChange={(e) => setNotificationData({...notificationData, content: e.target.value})}
+                        placeholder="Nhập nội dung thông báo..."
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={sendingNotification}
+                        className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {sendingNotification ? (
+                          <>
+                            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                            Đang gửi...
+                          </>
+                        ) : (
+                          <>
+                            <FaBell />
+                            Gửi Thông Báo
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
                 {/* Recent Activity */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Hoạt động gần đây</h2>
@@ -264,12 +387,8 @@ const AdminDashboard = () => {
             {activeTab === "orders" && <Orders />}
             {activeTab === "feedback" && <Feedback />}
             {activeTab === "support" && <Support />}
-            {activeTab === "settings" && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Cài đặt hệ thống</h2>
-                <p className="text-gray-600">Tính năng đang phát triển...</p>
-              </div>
-            )}
+            {activeTab === "settings" && <BankSettings />}
+            {activeTab === "banners" && <Banners />}
           </div>
         </div>
       </div>

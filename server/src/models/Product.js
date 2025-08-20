@@ -1,4 +1,4 @@
-const { pool } = require('../config/database');
+const db = require('../config/database');
 
 class Product {
   // Get all products with pagination and filters
@@ -57,7 +57,7 @@ class Product {
       
       query += ` LIMIT ${safeLimit} OFFSET ${safeOffset}`;
       
-      const [rows] = await pool.execute(query, params);
+      const [rows] = await db.pool.execute(query, params);
       
       // Get total count
       let countQuery = 'SELECT COUNT(*) as total FROM products p WHERE p.is_active = 1';
@@ -97,7 +97,7 @@ class Product {
         countQuery += ' AND p.is_flash_sale = 1 AND NOW() BETWEEN p.flash_sale_start AND p.flash_sale_end';
       }
       
-      const [countResult] = await pool.execute(countQuery, countParams);
+      const [countResult] = await db.pool.execute(countQuery, countParams);
       const total = countResult[0].total;
       
       return {
@@ -117,9 +117,10 @@ class Product {
   // Get product by ID with images and reviews
   static async getById(id) {
     try {
-      // Get product details
-      const [productRows] = await pool.execute(`
-        SELECT p.*, c.name as category_name
+      // Get product details with primary image
+      const [productRows] = await db.pool.execute(`
+        SELECT p.*, c.name as category_name,
+               COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE p.id = ? AND p.is_active = 1
@@ -131,40 +132,53 @@ class Product {
       
       const product = productRows[0];
       
-      // Get product images
-      const [imageRows] = await pool.execute(`
-        SELECT * FROM product_images 
-        WHERE product_id = ? 
-        ORDER BY is_primary DESC, sort_order ASC
-      `, [id]);
-      
-      // Get product reviews
-      const [reviewRows] = await pool.execute(`
-        SELECT pr.*, u.username, u.avatar
-        FROM product_reviews pr
-        LEFT JOIN users u ON pr.user_id = u.id
-        WHERE pr.product_id = ?
-        ORDER BY pr.created_at DESC
-        LIMIT 10
-      `, [id]);
+      // Get all product images
+      let imageRows = [];
+      try {
+        const [imageResult] = await db.pool.execute(`
+          SELECT * FROM product_images 
+          WHERE product_id = ? 
+          ORDER BY is_primary DESC
+        `, [id]);
+        imageRows = imageResult;
+      } catch (imageError) {
+        console.log('Warning: Could not fetch product images:', imageError.message);
+        // Use primary image as fallback
+        imageRows = [{
+          id: 1,
+          product_id: id,
+          image_url: product.primary_image,
+          is_primary: 1
+        }];
+      }
       
       // Get related products
-      const [relatedRows] = await pool.execute(`
-        SELECT p.*, 
-               COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
-        FROM products p
-        WHERE p.category_id = ? AND p.id != ? AND p.is_active = 1
-        ORDER BY p.rating DESC, p.views DESC
-        LIMIT 8
-      `, [product.category_id, id]);
+      let relatedRows = [];
+      try {
+        const [relatedResult] = await db.pool.execute(`
+          SELECT p.*, 
+                 COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
+          FROM products p
+          WHERE p.category_id = ? AND p.id != ? AND p.is_active = 1
+          ORDER BY p.rating DESC
+          LIMIT 8
+        `, [product.category_id, id]);
+        relatedRows = relatedResult;
+      } catch (relatedError) {
+        console.log('Warning: Could not fetch related products:', relatedError.message);
+      }
       
-      // Increment view count
-      await pool.execute('UPDATE products SET views = views + 1 WHERE id = ?', [id]);
+      // Increment view count (ignore if views column doesn't exist)
+      try {
+        await db.pool.execute('UPDATE products SET views = COALESCE(views, 0) + 1 WHERE id = ?', [id]);
+      } catch (viewError) {
+        console.log('Warning: Could not update view count:', viewError.message);
+      }
       
       return {
         ...product,
         images: imageRows,
-        reviews: reviewRows,
+        reviews: [], // Placeholder - reviews table not created yet
         related_products: relatedRows
       };
     } catch (error) {
@@ -187,7 +201,7 @@ class Product {
         ORDER BY p.rating DESC, p.views DESC
         LIMIT ${safeLimit}
       `;
-      const [rows] = await pool.execute(sql);
+      const [rows] = await db.pool.execute(sql);
       
       return rows;
     } catch (error) {
@@ -198,7 +212,7 @@ class Product {
   // Get flash sale products
   static async getFlashSale() {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT p.*, c.name as category_name,
                COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
         FROM products p
@@ -221,7 +235,7 @@ class Product {
       const safeLimit = Math.max(1, Math.min(200, Number(limit) || 12));
       const safeOffset = Math.max(0, (Math.max(1, Number(page) || 1) - 1) * safeLimit);
       
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT p.*, c.name as category_name,
                COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
         FROM products p
@@ -232,7 +246,7 @@ class Product {
       `, [categoryId]);
       
       // Get total count
-      const [countResult] = await pool.execute(`
+      const [countResult] = await db.pool.execute(`
         SELECT COUNT(*) as total 
         FROM products 
         WHERE category_id = ? AND is_active = 1
@@ -260,7 +274,7 @@ class Product {
       const safeLimit = Math.max(1, Math.min(200, Number(limit) || 12));
       const safeOffset = Math.max(0, (Math.max(1, Number(page) || 1) - 1) * safeLimit);
       
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT p.*, c.name as category_name,
                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image
         FROM products p
@@ -281,7 +295,7 @@ class Product {
       ]);
       
       // Get total count
-      const [countResult] = await pool.execute(`
+      const [countResult] = await db.pool.execute(`
         SELECT COUNT(*) as total 
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
@@ -308,7 +322,7 @@ class Product {
   // Get product brands
   static async getBrands() {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT DISTINCT brand 
         FROM products 
         WHERE brand IS NOT NULL AND brand != '' AND is_active = 1
@@ -324,7 +338,7 @@ class Product {
   // Get price range
   static async getPriceRange() {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT MIN(price) as min_price, MAX(price) as max_price
         FROM products 
         WHERE is_active = 1
@@ -342,7 +356,7 @@ class Product {
       const { rating, title, comment } = reviewData;
       
       // Check if user already reviewed this product
-      const [existingReview] = await pool.execute(`
+      const [existingReview] = await db.pool.execute(`
         SELECT id FROM product_reviews 
         WHERE product_id = ? AND user_id = ?
       `, [productId, userId]);
@@ -352,7 +366,7 @@ class Product {
       }
       
       // Add review
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         INSERT INTO product_reviews (product_id, user_id, rating, title, comment)
         VALUES (?, ?, ?, ?, ?)
       `, [productId, userId, rating, title, comment]);
@@ -369,7 +383,7 @@ class Product {
   // Update product rating
   static async updateProductRating(productId) {
     try {
-      await pool.execute(`
+      await db.pool.execute(`
         UPDATE products p 
         SET rating = (
           SELECT AVG(rating) 
@@ -397,7 +411,7 @@ class Product {
         flash_sale_price, flash_sale_start, flash_sale_end
       } = productData;
       
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         INSERT INTO products (
           name, description, price, original_price, stock, category_id,
           brand, weight, dimensions, is_featured, is_flash_sale,
@@ -424,7 +438,7 @@ class Product {
         flash_sale_price, flash_sale_start, flash_sale_end
       } = productData;
       
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         UPDATE products SET
           name = ?, description = ?, price = ?, original_price = ?, 
           stock = ?, category_id = ?, brand = ?, weight = ?, 
@@ -447,7 +461,7 @@ class Product {
   // Admin: Delete product
   static async delete(id) {
     try {
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         UPDATE products SET is_active = 0 WHERE id = ?
       `, [id]);
       
@@ -488,7 +502,7 @@ class Product {
       query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
       params.push(limit, offset);
       
-      const [rows] = await pool.execute(query, params);
+      const [rows] = await db.pool.execute(query, params);
       
       // Get total count
       let countQuery = `
@@ -514,7 +528,7 @@ class Product {
         countParams.push(filters.is_active);
       }
       
-      const [countResult] = await pool.execute(countQuery, countParams);
+      const [countResult] = await db.pool.execute(countQuery, countParams);
       const total = countResult[0].total;
       
       return {

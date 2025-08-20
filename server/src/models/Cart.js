@@ -1,10 +1,10 @@
-const { pool } = require('../config/database');
+const db = require('../config/database');
 
 class Cart {
   // Get user's cart items
   static async getByUserId(userId) {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT c.*, p.name, p.price, p.original_price, p.stock,
                (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
         FROM cart c
@@ -23,7 +23,7 @@ class Cart {
   static async addItem(userId, productId, quantity = 1) {
     try {
       // Check if product exists and is active
-      const [productRows] = await pool.execute(`
+      const [productRows] = await db.pool.execute(`
         SELECT id, stock FROM products WHERE id = ? AND is_active = 1
       `, [productId]);
       
@@ -39,7 +39,7 @@ class Cart {
       }
       
       // Check if item already exists in cart
-      const [existingRows] = await pool.execute(`
+      const [existingRows] = await db.pool.execute(`
         SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ?
       `, [userId, productId]);
       
@@ -51,14 +51,14 @@ class Cart {
           throw new Error('Số lượng sản phẩm trong kho không đủ');
         }
         
-        await pool.execute(`
+        await db.pool.execute(`
           UPDATE cart SET quantity = ?, updated_at = NOW() WHERE id = ?
         `, [newQuantity, existingRows[0].id]);
         
         return existingRows[0].id;
       } else {
         // Add new item
-        const [result] = await pool.execute(`
+        const [result] = await db.pool.execute(`
           INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)
         `, [userId, productId, quantity]);
         
@@ -73,7 +73,7 @@ class Cart {
   static async updateQuantity(userId, productId, quantity) {
     try {
       // Check if product exists and is active
-      const [productRows] = await pool.execute(`
+      const [productRows] = await db.pool.execute(`
         SELECT id, stock FROM products WHERE id = ? AND is_active = 1
       `, [productId]);
       
@@ -94,7 +94,7 @@ class Cart {
         return true;
       }
       
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         UPDATE cart SET quantity = ?, updated_at = NOW() 
         WHERE user_id = ? AND product_id = ?
       `, [quantity, userId, productId]);
@@ -108,7 +108,7 @@ class Cart {
   // Remove item from cart
   static async removeItem(userId, productId) {
     try {
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         DELETE FROM cart WHERE user_id = ? AND product_id = ?
       `, [userId, productId]);
       
@@ -121,7 +121,7 @@ class Cart {
   // Clear user's cart
   static async clearCart(userId) {
     try {
-      const [result] = await pool.execute(`
+      const [result] = await db.pool.execute(`
         DELETE FROM cart WHERE user_id = ?
       `, [userId]);
       
@@ -134,7 +134,7 @@ class Cart {
   // Get cart count
   static async getCartCount(userId) {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT SUM(quantity) as count FROM cart WHERE user_id = ?
       `, [userId]);
       
@@ -147,7 +147,7 @@ class Cart {
   // Get cart total
   static async getCartTotal(userId) {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT SUM(c.quantity * p.price) as total
         FROM cart c
         LEFT JOIN products p ON c.product_id = p.id
@@ -163,7 +163,7 @@ class Cart {
   // Check if cart items are still available
   static async validateCart(userId) {
     try {
-      const [rows] = await pool.execute(`
+      const [rows] = await db.pool.execute(`
         SELECT c.product_id, c.quantity, p.name, p.stock, p.price, p.is_active
         FROM cart c
         LEFT JOIN products p ON c.product_id = p.id
@@ -207,7 +207,7 @@ class Cart {
       
       // Insert order items
       for (const item of cartItems) {
-        await pool.execute(`
+        await db.pool.execute(`
           INSERT INTO order_items (order_id, product_id, product_name, product_image, price, quantity, subtotal)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
@@ -221,7 +221,7 @@ class Cart {
         ]);
         
         // Update product stock
-        await pool.execute(`
+        await db.pool.execute(`
           UPDATE products SET stock = stock - ? WHERE id = ?
         `, [item.quantity, item.product_id]);
       }

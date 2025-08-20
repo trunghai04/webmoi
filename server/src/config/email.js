@@ -83,11 +83,12 @@ const emailTemplates = {
     `
   }),
 
-  resetPassword: (resetLink) => ({
+  resetPassword: (username, resetLink) => ({
     subject: 'Đặt lại mật khẩu - MuaSamViet',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #f97316;">Đặt lại mật khẩu</h2>
+        <p>Xin chào ${username},</p>
         <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản MuaSamViet.</p>
         <p>Vui lòng click vào link bên dưới để đặt lại mật khẩu:</p>
         <a href="${resetLink}" style="background-color: #f97316; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Đặt lại mật khẩu</a>

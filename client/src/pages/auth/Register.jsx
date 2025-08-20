@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaUser, FaGoogle, FaFacebook, FaPhone, FaCalendar, FaMapMarkerAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -10,6 +10,7 @@ import Footer from "../../components/Footer";
 const Register = () => {
   const navigate = useNavigate();
   const { cartItems } = useContext(CartContext);
+  const { register } = useContext(AuthContext);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,6 +27,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
   // Handle scroll effect
@@ -66,6 +68,10 @@ const Register = () => {
       newErrors.username = "Tên đăng nhập không được để trống";
     } else if (formData.username.trim().length < 3) {
       newErrors.username = "Tên đăng nhập phải có ít nhất 3 ký tự";
+    } else if (formData.username.trim().length > 30) {
+      newErrors.username = "Tên đăng nhập không được quá 30 ký tự";
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới";
     }
 
     if (!formData.email) {
@@ -101,6 +107,8 @@ const Register = () => {
       newErrors.password = "Mật khẩu không được để trống";
     } else if (formData.password.length < 6) {
       newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = "Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 số";
     }
 
     if (!formData.confirmPassword) {
@@ -113,27 +121,47 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      return;
+    }
     
     if (!validateForm()) {
       return;
     }
 
+    setIsSubmitting(true);
     setIsLoading(true);
 
     try {
-      // Mock API call - replace with actual registration API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+      const result = await register({
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        full_name: formData.fullName,
+        birth_date: formData.birthDate,
+        address: formData.address
+      });
+
+      toast.success("Đăng ký thành công!");
       navigate("/auth/login");
     } catch (error) {
-      toast.error("Đăng ký thất bại! Vui lòng thử lại.");
+      console.error('Registration error:', error);
+      if (error.message.includes('Too many requests')) {
+        toast.error("Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút!");
+      } else {
+        toast.error(error.message || "Đăng ký thất bại! Vui lòng thử lại.");
+      }
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
+  }, [formData, register, navigate, isSubmitting, validateForm]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -437,7 +465,7 @@ const Register = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isSubmitting}
                   className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Đang đăng ký..." : "Đăng ký"}

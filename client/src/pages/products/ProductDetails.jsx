@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { 
   FaStar, 
   FaChevronLeft, 
@@ -21,11 +21,15 @@ import Footer from "../../components/Footer";
 import FloatingActions from "../../components/FloatingActions";
 import { AuthContext } from "../../context/AuthContext";
 import { CartContext } from "../../context/CartContext";
+import LoginPopup from "../../components/LoginPopup";
+
+import { toast } from "react-toastify";
 
 const ProductDetails = () => {
   const { id } = useParams();
-  const { isAuthenticated } = useContext(AuthContext);
-  const { cartItems } = useContext(CartContext);
+  const navigate = useNavigate();
+  const { isAuthenticated, isReady } = useContext(AuthContext);
+  const { addToCart, cartItems } = useContext(CartContext);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +37,8 @@ const ProductDetails = () => {
   const [selectedVariant, setSelectedVariant] = useState("M2_Ngẫu Nhiên");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [product, setProduct] = useState(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+
 
   const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -45,21 +51,41 @@ const ProductDetails = () => {
     const fetchProduct = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/products/${id}`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.error('Failed to fetch product:', res.status);
+          return;
+        }
         const json = await res.json();
         const p = json?.data?.product;
-        if (!p) return;
+        if (!p) {
+          console.error('No product data found');
+          return;
+        }
+        
+        // Map images from API response
         const images = (p.images && p.images.length > 0)
           ? p.images.map(i => i.image_url)
           : [p.primary_image || '/uploads/products/default.svg'];
+        
+        // Calculate discount
+        const originalPrice = Number(p.original_price || p.price || 0);
+        const currentPrice = Number(p.flash_sale_price || p.price || 0);
+        const hasDiscount = originalPrice > currentPrice;
+        
         setProduct({
           id: p.id,
           name: p.name,
-          price: Number(p.price || 0),
-          discountPrice: p.original_price && Number(p.original_price) > Number(p.price) ? Number(p.price) : Number(p.price || 0),
+          price: originalPrice,
+          discountPrice: currentPrice,
+          originalPrice: originalPrice,
+          flashSalePrice: p.flash_sale_price ? Number(p.flash_sale_price) : null,
           rating: Number(p.rating || 0),
           reviewCount: Number(p.total_reviews || 0),
           images,
+          description: p.description,
+          brand: p.brand,
+          category: p.category_name,
+          stock: Number(p.stock || 0),
           variants: [],
           shop: {
             name: p.brand || 'MuaSamViet Shop',
@@ -78,9 +104,12 @@ const ProductDetails = () => {
             delivery: '20 Th08 - 21 Th08',
             fee: '₫0',
             lateVoucher: '₫15.000'
-          }
+          },
+          relatedProducts: p.related_products || []
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error('Error fetching product:', e);
+      }
     };
     if (id) fetchProduct();
   }, [id]);
@@ -94,11 +123,143 @@ const ProductDetails = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle add to cart
+  const handleAddToCart = (product) => {
+    if (!isAuthenticated) {
+      setShowLoginPopup(true);
+      return;
+    }
+    
+    const cartProduct = {
+      id: product.id,
+      name: product.name,
+      price: product.discountPrice,
+      image: product.images[0],
+      quantity: quantity,
+      shopName: product.shop.name
+    };
+    
+    addToCart(cartProduct);
+    toast.success("Đã thêm sản phẩm vào giỏ hàng!");
+  };
+
+  // Handle buy now
+  const handleBuyNow = async (product) => {
+    console.log('handleBuyNow called with product:', product);
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('isReady:', isReady);
+    
+    if (!isReady) {
+      console.log('Auth not ready yet, waiting...');
+      toast.info('Đang kiểm tra đăng nhập...');
+      return;
+    }
+    
+    if (!isAuthenticated) {
+      console.log('User not authenticated, showing login popup');
+      setShowLoginPopup(true);
+      return;
+    }
+    
+    const cartProduct = {
+      id: product.id,
+      name: product.name,
+      price: product.discountPrice,
+      image: product.images[0],
+      quantity: quantity,
+      shopName: product.shop.name
+    };
+    
+    console.log('Created cart product:', cartProduct);
+    
+    try {
+      // Lưu sản phẩm vào localStorage để checkout có thể sử dụng
+      localStorage.setItem('checkoutItems', JSON.stringify([cartProduct]));
+      console.log('Saved to localStorage successfully');
+      
+      // Chuyển thẳng sang trang checkout
+      console.log('Navigating to checkout...');
+      navigate('/checkout');
+    } catch (error) {
+      console.error('Error in handleBuyNow:', error);
+      toast.error('Có lỗi xảy ra khi mua hàng');
+    }
+  };
+
+  // Handle chat with shop
+  const handleChatWithShop = () => {
+    if (!isAuthenticated) {
+      setShowLoginPopup(true);
+      return;
+    }
+    navigate('/chat');
+  };
+
+  // Handle view shop
+  const handleViewShop = () => {
+    navigate(`/shop/${product.shop.id || 1}`);
+  };
+
+  // Handle save voucher
+  const handleSaveVoucher = (voucher) => {
+    if (!isAuthenticated) {
+      setShowLoginPopup(true);
+      return;
+    }
+    toast.success(`Đã lưu voucher giảm ${voucher.discount}!`);
+  };
+
+  // Handle add to wishlist
+  const handleAddToWishlist = (product) => {
+    if (!isAuthenticated) {
+      setShowLoginPopup(true);
+      return;
+    }
+    toast.success("Đã thêm sản phẩm vào danh sách yêu thích!");
+  };
+
+  // Handle social sharing
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    const title = product.name;
+    const text = `Xem sản phẩm ${product.name} trên MuaSamViet`;
+    
+    let shareUrl = '';
+    
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'pinterest':
+        shareUrl = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&description=${encodeURIComponent(text)}&media=${encodeURIComponent(product.images[0])}`;
+        break;
+      case 'messenger':
+        shareUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&app_id=YOUR_APP_ID`;
+        break;
+      default:
+        return;
+    }
+    
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  };
+
   // Show loading if product not loaded yet
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Đang tải...</div>
+        <div className="text-lg">Đang tải sản phẩm...</div>
+      </div>
+    );
+  }
+
+  // Show loading if auth not ready yet
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Đang kiểm tra đăng nhập...</div>
       </div>
     );
   }
@@ -175,27 +336,42 @@ const ProductDetails = () => {
               </button>
             </div>
 
-            {/* Social Sharing */}
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex gap-2">
-                <button className="p-2 bg-blue-500 text-white rounded-full">
-                  <FaFacebookMessenger className="text-sm" />
-                </button>
-                <button className="p-2 bg-blue-600 text-white rounded-full">
-                  <FaFacebook className="text-sm" />
-                </button>
-                <button className="p-2 bg-red-500 text-white rounded-full">
-                  <FaPinterest className="text-sm" />
-                </button>
-                <button className="p-2 bg-blue-400 text-white rounded-full">
-                  <FaTwitter className="text-sm" />
-                </button>
-              </div>
-              <div className="flex items-center gap-1 text-gray-600">
-                <FaHeart className="text-red-500" />
-                <span className="text-sm">Đã thích (110)</span>
-              </div>
-            </div>
+                         {/* Social Sharing */}
+             <div className="flex items-center gap-4 mt-4">
+               <div className="flex gap-2">
+                 <button 
+                   onClick={() => handleShare('messenger')}
+                   className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+                 >
+                   <FaFacebookMessenger className="text-sm" />
+                 </button>
+                 <button 
+                   onClick={() => handleShare('facebook')}
+                   className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                 >
+                   <FaFacebook className="text-sm" />
+                 </button>
+                 <button 
+                   onClick={() => handleShare('pinterest')}
+                   className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                 >
+                   <FaPinterest className="text-sm" />
+                 </button>
+                 <button 
+                   onClick={() => handleShare('twitter')}
+                   className="p-2 bg-blue-400 text-white rounded-full hover:bg-blue-500 transition-colors"
+                 >
+                   <FaTwitter className="text-sm" />
+                 </button>
+               </div>
+               <button 
+                 onClick={() => handleAddToWishlist(product)}
+                 className="flex items-center gap-1 text-gray-600 hover:text-red-500 transition-colors"
+               >
+                 <FaHeart className="text-red-500" />
+                 <span className="text-sm">Thêm vào yêu thích</span>
+               </button>
+             </div>
           </div>
 
                      {/* Center Column - Product Info and Actions */}
@@ -220,8 +396,15 @@ const ProductDetails = () => {
              <div className="mb-4">
                <div className="flex items-center gap-2">
                  <span className="text-3xl font-bold text-orange-500">₫{product.discountPrice.toLocaleString('vi-VN')}</span>
-                 <span className="text-lg text-gray-400 line-through">₫{product.price.toLocaleString('vi-VN')}</span>
+                 {product.originalPrice > product.discountPrice && (
+                   <span className="text-lg text-gray-400 line-through">₫{product.originalPrice.toLocaleString('vi-VN')}</span>
+                 )}
                </div>
+               {product.flashSalePrice && (
+                 <div className="text-sm text-red-600 font-semibold mt-1">
+                   🔥 Flash Sale: ₫{product.flashSalePrice.toLocaleString('vi-VN')}
+                 </div>
+               )}
              </div>
 
             {/* Shop Vouchers */}
@@ -308,12 +491,18 @@ const ProductDetails = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              <button className="flex-1 border-2 border-orange-500 text-orange-500 py-3 rounded flex items-center justify-center gap-2">
+              <button 
+                onClick={() => handleAddToCart(product)}
+                className="flex-1 border-2 border-orange-500 text-orange-500 py-3 rounded flex items-center justify-center gap-2 hover:bg-orange-50 transition-colors"
+              >
                 <FaShoppingCart />
                 Thêm Vào Giỏ Hàng
               </button>
-              <button className="flex-1 bg-orange-500 text-white py-3 rounded">
-                Mua Với Voucher ₫{product.discountPrice.toLocaleString('vi-VN')}
+              <button 
+                onClick={() => handleBuyNow(product)}
+                className="flex-1 bg-orange-500 text-white py-3 rounded hover:bg-orange-600 transition-colors"
+              >
+                Mua Ngay ₫{product.discountPrice.toLocaleString('vi-VN')}
               </button>
             </div>
           </div>
@@ -330,10 +519,16 @@ const ProductDetails = () => {
                 </div>
               </div>
               <div className="flex gap-2 mb-3">
-                <button className="flex-1 border border-orange-500 text-orange-500 py-2 rounded text-sm">
+                <button 
+                  onClick={() => handleChatWithShop()}
+                  className="flex-1 border border-orange-500 text-orange-500 py-2 rounded text-sm hover:bg-orange-50 transition-colors"
+                >
                   Chat Ngay
                 </button>
-                <button className="flex-1 border border-orange-500 text-orange-500 py-2 rounded text-sm">
+                <button 
+                  onClick={() => handleViewShop()}
+                  className="flex-1 border border-orange-500 text-orange-500 py-2 rounded text-sm hover:bg-orange-50 transition-colors"
+                >
                   Xem Shop
                 </button>
               </div>
@@ -358,7 +553,10 @@ const ProductDetails = () => {
                       <div className="text-xs text-gray-600">Đơn Tối Thiểu {voucher.minOrder}</div>
                       <div className="text-xs text-gray-500">HSD: 08.11.2025</div>
                     </div>
-                    <button className="px-3 py-1 bg-red-500 text-white text-sm rounded">
+                    <button 
+                      onClick={() => handleSaveVoucher(voucher)}
+                      className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                    >
                       Lưu
                     </button>
                   </div>
@@ -375,21 +573,26 @@ const ProductDetails = () => {
             <div className="bg-white border rounded-lg p-4 mb-4">
               <h3 className="font-semibold mb-4">CHI TIẾT SẢN PHẨM</h3>
               <div className="space-y-2 text-sm">
-                                 <div className="flex">
-                   <span className="w-32 text-gray-600">Danh Mục:</span>
-                   <span>MuaSamViet &gt; Thiết Bị Điện Gia Dụng &gt; Quạt &amp; Máy nóng lạnh &gt; Quạt</span>
-                 </div>
                 <div className="flex">
-                  <span className="w-32 text-gray-600">Tên tổ chức chịu trách nhiệm sản xuất:</span>
-                  <span>Đang cập nhật</span>
+                  <span className="w-32 text-gray-600">Danh Mục:</span>
+                  <span>{product.category || 'Đang cập nhật'}</span>
                 </div>
                 <div className="flex">
-                  <span className="w-32 text-gray-600">Địa chỉ tổ chức chịu trách nhiệm sản xuất:</span>
-                  <span>Đang cập nhật</span>
+                  <span className="w-32 text-gray-600">Thương hiệu:</span>
+                  <span>{product.brand || 'Đang cập nhật'}</span>
                 </div>
                 <div className="flex">
-                  <span className="w-32 text-gray-600">Loại bảo hành:</span>
-                  <span>Bảo hành nhà cung cấp</span>
+                  <span className="w-32 text-gray-600">Tình trạng:</span>
+                  <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>
+                    {product.stock > 0 ? `Còn ${product.stock} sản phẩm` : 'Hết hàng'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-32 text-gray-600">Đánh giá:</span>
+                  <span className="flex items-center gap-1">
+                    <FaStar className="text-yellow-400" />
+                    {product.rating} ({product.reviewCount} đánh giá)
+                  </span>
                 </div>
                 <div className="flex">
                   <span className="w-32 text-gray-600">Gửi từ:</span>
@@ -403,22 +606,35 @@ const ProductDetails = () => {
 
             <div className="bg-white border rounded-lg p-4 mb-4">
               <h3 className="font-semibold mb-4">MÔ TẢ SẢN PHẨM</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FaCheck className="text-green-500" />
-                  <span className="text-sm">Hình ảnh sản phẩm giống hình 100%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FaCheck className="text-green-500" />
-                  <span className="text-sm">Chất lượng sản phẩm đúng như mô tả</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FaCheck className="text-green-500" />
-                  <span className="text-sm">Sản phẩm được kiểm tra kĩ càng, nghiêm ngặt trước khi giao hàng</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FaCheck className="text-green-500" />
-                  <span className="text-sm">Đóng gói và giao hàng ngay khi nhận được đơn đặt hàng</span>
+              <div className="space-y-4">
+                {product.description ? (
+                  <div className="text-sm text-gray-700 leading-relaxed">
+                    {product.description}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">Chưa có mô tả chi tiết</div>
+                )}
+                
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-sm mb-2">Cam kết của MuaSamViet:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <FaCheck className="text-green-500" />
+                      <span className="text-sm">Hình ảnh sản phẩm giống hình 100%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaCheck className="text-green-500" />
+                      <span className="text-sm">Chất lượng sản phẩm đúng như mô tả</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaCheck className="text-green-500" />
+                      <span className="text-sm">Sản phẩm được kiểm tra kĩ càng, nghiêm ngặt trước khi giao hàng</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaCheck className="text-green-500" />
+                      <span className="text-sm">Đóng gói và giao hàng ngay khi nhận được đơn đặt hàng</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -560,8 +776,66 @@ const ProductDetails = () => {
         </div>
       </div>
 
+      {/* Related Products */}
+      {product.relatedProducts && product.relatedProducts.length > 0 && (
+        <div className="max-w-screen-2xl mx-auto px-4 md:px-6 lg:px-8 py-8">
+          <h2 className="text-2xl font-bold mb-6">SẢN PHẨM LIÊN QUAN</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {product.relatedProducts.map((relatedProduct) => (
+              <Link 
+                key={relatedProduct.id} 
+                to={`/product/${relatedProduct.id}`}
+                className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <div className="relative mb-3">
+                  <img
+                    src={relatedProduct.primary_image}
+                    alt={relatedProduct.name}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  {relatedProduct.original_price && Number(relatedProduct.original_price) > Number(relatedProduct.price) && (
+                    <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                      -{Math.round((1 - (Number(relatedProduct.price) / Number(relatedProduct.original_price))) * 100)}%
+                    </div>
+                  )}
+                </div>
+                <h3 className="font-semibold text-gray-800 text-sm mb-2 line-clamp-2 h-10">
+                  {relatedProduct.name}
+                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-1">
+                    <FaStar className="text-yellow-400 text-xs" />
+                    <span className="text-xs text-gray-600">{relatedProduct.rating}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-orange-600 font-bold text-sm">
+                      ₫{Number(relatedProduct.price).toLocaleString()}
+                    </div>
+                    {relatedProduct.original_price && Number(relatedProduct.original_price) > Number(relatedProduct.price) && (
+                      <div className="text-gray-400 text-xs line-through">
+                        ₫{Number(relatedProduct.original_price).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <FloatingActions />
       <Footer />
+      
+      {/* Login Popup */}
+      {showLoginPopup && (
+        <LoginPopup 
+          onClose={() => setShowLoginPopup(false)}
+          onLoginSuccess={() => setShowLoginPopup(false)}
+        />
+      )}
     </>
   );
 };

@@ -66,12 +66,27 @@ const ResetPassword = () => {
     setIsLoading(true);
 
     try {
-      // Mock API call - replace with actual reset password API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setIsSuccess(true);
-      toast.success("Đặt lại mật khẩu thành công!");
+      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          token: token,
+          newPassword: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsSuccess(true);
+        toast.success("Đặt lại mật khẩu thành công!");
+      } else {
+        toast.error(data.message || "Đặt lại mật khẩu thất bại! Vui lòng thử lại.");
+      }
     } catch (error) {
+      console.error('Reset password error:', error);
       toast.error("Đặt lại mật khẩu thất bại! Vui lòng thử lại.");
     } finally {
       setIsLoading(false);

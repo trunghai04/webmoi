@@ -30,6 +30,10 @@ import ChangePassword from "./sections/ChangePassword";
 import NotificationSettings from "./sections/NotificationSettings";
 import PrivacySettings from "./sections/PrivacySettings";
 import PersonalInfo from "./sections/PersonalInfo";
+import AccountOverview from "./sections/AccountOverview";
+import Orders from "./sections/Orders";
+import Vouchers from "./sections/Vouchers";
+import Coins from "./sections/Coins";
 
 const MyAccount = () => {
   const { isAuthenticated, user } = useContext(AuthContext);
@@ -43,10 +47,10 @@ const MyAccount = () => {
 
   // Use user from context or fallback to default
   const currentUser = user || {
-    username: "ngtrunghi927",
-    name: "Đăng",
+    username: "Khách",
+    name: "Người dùng",
     email: "",
-    phone: "*********02",
+    phone: "",
     avatar: null
   };
 
@@ -104,6 +108,8 @@ const MyAccount = () => {
   const isSubActive = (path) => {
     return location.pathname === path;
   };
+
+  // Debug routing (removed for production)
 
   // Handle scroll effect
   useEffect(() => {
@@ -187,8 +193,8 @@ const MyAccount = () => {
               {/* User Profile Section */}
               <div className="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="relative w-20 h-20 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center overflow-hidden">
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                  {currentUser.avatar ? (
+                    <img src={currentUser.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                   ) : (
                     <FaUser className="text-white text-3xl" />
                   )}
@@ -197,6 +203,12 @@ const MyAccount = () => {
                   </button>
                 </div>
                 <div className="font-semibold text-gray-800 dark:text-white mb-1">{currentUser.username}</div>
+                {currentUser.email && (
+                  <div className="text-gray-500 dark:text-gray-400 text-xs mb-2">{currentUser.email}</div>
+                )}
+                {currentUser.phone && (
+                  <div className="text-gray-500 dark:text-gray-400 text-xs mb-2">{currentUser.phone}</div>
+                )}
                 <Link 
                   to="/user/account/profile" 
                   className="text-gray-500 dark:text-gray-400 text-sm hover:text-orange-500 dark:hover:text-orange-400 flex items-center justify-center gap-1 transition-colors"
@@ -296,14 +308,18 @@ const MyAccount = () => {
           <main className="flex-1">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
               <Routes>
-                <Route path="profile" element={<Profile />} />
-                <Route path="bank" element={<Bank />} />
-                <Route path="address" element={<Address />} />
-                <Route path="password" element={<ChangePassword />} />
-                <Route path="notifications" element={<NotificationSettings />} />
-                <Route path="privacy" element={<PrivacySettings />} />
-                <Route path="personal" element={<PersonalInfo />} />
-                <Route path="*" element={<Profile />} />
+                <Route path="account" element={<AccountOverview />} />
+                <Route path="account/profile" element={<Profile />} />
+                <Route path="account/bank" element={<Bank />} />
+                <Route path="account/address" element={<Address />} />
+                <Route path="account/password" element={<ChangePassword />} />
+                <Route path="account/notifications" element={<NotificationSettings />} />
+                <Route path="account/privacy" element={<PrivacySettings />} />
+                <Route path="account/personal" element={<PersonalInfo />} />
+                <Route path="orders" element={<Orders />} />
+                <Route path="vouchers" element={<Vouchers />} />
+                <Route path="coins" element={<Coins />} />
+                <Route path="*" element={<AccountOverview />} />
               </Routes>
             </div>
           </main>

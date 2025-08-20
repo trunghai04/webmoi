@@ -16,6 +16,11 @@ const validationRules = {
       .normalizeEmail()
       .withMessage('Please provide a valid email address'),
     
+    body('full_name')
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Full name is required and must be less than 100 characters'),
+    
     body('phone')
       .optional()
       .matches(/^[0-9]{10,11}$/)
@@ -118,6 +123,25 @@ const validationRules = {
       .withMessage('Limit must be between 1 and 100')
   ],
 
+  // Forgot password
+  forgotPassword: [
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Please provide a valid email address')
+  ],
+
+  // Reset password
+  resetPassword: [
+    body('token')
+      .notEmpty()
+      .withMessage('Reset token is required'),
+    
+    body('newPassword')
+      .isLength({ min: 6 })
+      .withMessage('Password must be at least 6 characters long')
+  ],
+
   // ID parameter
   idParam: [
     param('id')
@@ -135,8 +159,8 @@ const handleValidationErrors = (req, res, next) => {
       success: false,
       message: 'Validation failed',
       errors: errors.array().map(error => ({
-        field: error.path,
-        message: error.msg,
+        param: error.param || error.path,
+        msg: error.msg,
         value: error.value
       }))
     });

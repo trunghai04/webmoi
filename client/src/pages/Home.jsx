@@ -56,6 +56,7 @@ const Home = () => {
   const { isAuthenticated, login } = useContext(AuthContext);
   const { addToCart, cartItems } = useContext(CartContext);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: "",
@@ -75,6 +76,28 @@ const Home = () => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fetch banners
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${API_BASE}/api/banners`);
+        const data = await res.json();
+        if (data.success) {
+          const active = (data.data || [])
+            .filter(b => Number(b.is_active) === 1)
+            .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          setBanners(active);
+        } else {
+          setBanners([]);
+        }
+      } catch (e) {
+        setBanners([]);
+      }
+    };
+    fetchBanners();
   }, []);
 
   // Handle login form change
@@ -148,50 +171,55 @@ const Home = () => {
     return (
       <motion.div
         whileHover={{ y: -5 }}
-        className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow relative"
+        className="bg-white rounded-lg shadow-sm p-2 sm:p-3 md:p-4 cursor-pointer hover:shadow-md transition-shadow relative flex flex-col"
         onClick={goToDetails}
       >
-        <div className="relative mb-3">
+        <div className="relative mb-2 sm:mb-3 flex-shrink-0">
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-48 object-cover rounded-lg"
+            className="w-full h-32 sm:h-40 md:h-48 object-cover rounded-lg"
           />
           {product.discount > 0 && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+            <div className="absolute top-1 sm:top-2 left-1 sm:left-2 bg-red-600 text-white text-xs px-1 sm:px-2 py-1 rounded-full">
               -{product.discount}%
             </div>
           )}
           <button
             onClick={handleAddToCart}
-            className="absolute top-2 right-2 bg-white text-gray-600 p-2 rounded-full hover:bg-orange-500 hover:text-white transition-colors shadow-md"
+            className="absolute top-1 sm:top-2 right-1 sm:right-2 bg-white text-gray-600 p-1 sm:p-2 rounded-full hover:bg-orange-500 hover:text-white transition-colors shadow-md"
           >
-            <FaShoppingCart className="text-sm" />
+            <FaShoppingCart className="text-xs sm:text-sm" />
           </button>
         </div>
-        <h3 className="font-semibold text-gray-800 text-sm mb-2 line-clamp-2 h-10">
-          {product.name}
-        </h3>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-1">
-            <FaStar className="text-yellow-400 text-xs" />
-            <span className="text-xs text-gray-600">{product.rating}</span>
-            <span className="text-xs text-gray-400">({product.review_count})</span>
-          </div>
-          <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">{product.badge}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-orange-600 font-bold text-lg">
-              {product.price.toLocaleString()}₫
+        
+        <div className="flex-1 flex flex-col">
+          <h3 className="font-semibold text-gray-800 text-xs sm:text-sm mb-1 sm:mb-2 line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem]">
+            {product.name}
+          </h3>
+          
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="flex items-center space-x-1">
+              <FaStar className="text-yellow-400 text-xs" />
+              <span className="text-xs text-gray-600">{product.rating}</span>
+              <span className="text-xs text-gray-400 hidden sm:inline">({product.review_count})</span>
             </div>
-            {product.original_price > product.price && (
-              <div className="text-gray-400 text-sm line-through">
-                {product.original_price.toLocaleString()}₫
-              </div>
-            )}
+            <span className="text-xs bg-orange-100 text-orange-800 px-1 sm:px-2 py-1 rounded-full">{product.badge}</span>
           </div>
-          <span className="text-xs text-gray-500">{product.shipping}</span>
+          
+          <div className="flex items-center justify-between mt-auto">
+            <div>
+              <div className="text-orange-600 font-bold text-sm sm:text-base md:text-lg">
+                {product.price.toLocaleString()}₫
+              </div>
+              {product.original_price > product.price && (
+                <div className="text-gray-400 text-xs sm:text-sm line-through">
+                  {product.original_price.toLocaleString()}₫
+                </div>
+              )}
+            </div>
+            <span className="text-xs text-gray-500 hidden sm:block">{product.shipping}</span>
+          </div>
         </div>
       </motion.div>
     );
@@ -221,38 +249,38 @@ const Home = () => {
               <h3 className="font-semibold text-white mb-2 text-sm">Danh mục</h3>
               <div className="h-full overflow-y-auto pr-1 category-scroll">
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                <Link to="/categories/1" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaTshirt className="text-white text-xs" />
                   <span className="text-white text-xs truncate">Thời trang</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                </Link>
+                <Link to="/categories/4" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaHome className="text-white text-xs" />
                   <span className="text-white text-xs truncate">Nhà cửa</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                </Link>
+                <Link to="/categories/2" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaMobile className="text-white text-xs" />
-                  <span className="text-white text-xs truncate">Điện thoại</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                  <span className="text-white text-xs truncate">Điện tử</span>
+                </Link>
+                <Link to="/categories/3" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaTshirt className="text-white text-xs" />
-                  <span className="text-white text-xs truncate">Giày dép</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                  <span className="text-white text-xs truncate">Phụ kiện</span>
+                </Link>
+                <Link to="/categories/5" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaBaby className="text-white text-xs" />
                   <span className="text-white text-xs truncate">Trẻ em</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                </Link>
+                <Link to="/categories/5" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaHeartbeat className="text-white text-xs" />
                   <span className="text-white text-xs truncate">Làm đẹp</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                </Link>
+                <Link to="/categories" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaStore className="text-white text-xs" />
                   <span className="text-white text-xs truncate">Xe cộ</span>
-                </div>
-                <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
+                </Link>
+                <Link to="/categories" className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                   <FaCoffee className="text-white text-xs" />
                   <span className="text-white text-xs truncate">Thực phẩm</span>
-                  </div>
+                  </Link>
                   <div className="flex items-center space-x-2 p-1.5 hover:bg-orange-600 rounded cursor-pointer">
                     <FaCamera className="text-white text-xs" />
                     <span className="text-white text-xs truncate">Máy ảnh & Phụ kiện</span>
@@ -320,27 +348,55 @@ const Home = () => {
               
               {/* Main Banner Layout */}
               <div className="flex flex-col lg:flex-row gap-2">
-                {/* Left - Large Orange Card */}
-                <div className="w-full lg:w-60 h-48 md:h-56 lg:h-72 bg-orange-500 rounded-lg p-3 flex flex-col justify-between">
-                  <div className="text-white">
-                    <div className="text-lg font-bold mb-2">MuaSamViet Lựa Chọn</div>
-                    <div className="text-2xl font-bold mb-2">Giảm giá 50%</div>
-                    <div className="text-sm">Thương hiệu lớn - Sản phẩm hot</div>
-                  </div>
-                  <div className="flex justify-center">
-                    <div className="w-32 h-20 bg-white/20 rounded-lg flex items-center justify-center">
-                      <div className="text-white text-xs text-center">
-                        🛒 Xe đẩy hàng<br/>
-                        với các sản phẩm
+                {/* Left - Featured Banner */}
+                {banners && banners.length > 0 ? (
+                  <a
+                    href={banners[0].link_url || '#'}
+                    target={banners[0].link_url ? '_blank' : undefined}
+                    rel={banners[0].link_url ? 'noopener noreferrer' : undefined}
+                    className="w-full lg:w-60 h-48 md:h-56 lg:h-72 rounded-lg overflow-hidden block"
+                  >
+                    <img
+                      src={banners[0].image_url}
+                      alt={banners[0].title || 'Banner'}
+                      className="w-full h-full object-cover"
+                    />
+                  </a>
+                ) : (
+                  <div className="w-full lg:w-60 h-48 md:h-56 lg:h-72 bg-orange-500 rounded-lg p-3 flex flex-col justify-between">
+                    <div className="text-white">
+                      <div className="text-lg font-bold mb-2">MuaSamViet Lựa Chọn</div>
+                      <div className="text-2xl font-bold mb-2">Giảm giá 50%</div>
+                      <div className="text-sm">Thương hiệu lớn - Sản phẩm hot</div>
+                    </div>
+                    <div className="flex justify-center">
+                      <div className="w-32 h-20 bg-white/20 rounded-lg flex items-center justify-center">
+                        <div className="text-white text-xs text-center">
+                          🛒 Xe đẩy hàng<br/>
+                          với các sản phẩm
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Right - Banners Grid */}
                 <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 lg:gap-4">
-                  {new Array(6).fill(0).map((_, idx) => (
-                    <div key={idx} className="bg-white border rounded-lg overflow-hidden">
+                  {(banners && banners.length > 1 ? banners.slice(1, 7) : []).map((b) => (
+                    <a
+                      key={b.id}
+                      href={b.link_url || '#'}
+                      target={b.link_url ? '_blank' : undefined}
+                      rel={b.link_url ? 'noopener noreferrer' : undefined}
+                      className="bg-white border rounded-lg overflow-hidden block"
+                    >
+                      <div className="w-full aspect-[3/2]">
+                        <img src={b.image_url} alt={b.title || 'Banner'} className="w-full h-full object-cover" />
+                      </div>
+                    </a>
+                  ))}
+                  {(!banners || banners.length <= 1) && new Array(6).fill(0).map((_, idx) => (
+                    <div key={`ph-${idx}`} className="bg-white border rounded-lg overflow-hidden">
                       <div className="w-full aspect-[3/2] bg-orange-50 flex items-center justify-center text-orange-500 font-semibold">
                         Banner {idx + 1}
                       </div>
@@ -428,11 +484,11 @@ const Home = () => {
             </div>
             
             {/* 8 Circular Categories Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3 md:gap-4">
               {/* Element 1 - Tôi đoán bạn */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-2">
-                  <FaHeart className="text-orange-500 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaHeart className="text-orange-500 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-orange-500 text-xs font-medium">Yêu thích</div>
@@ -440,9 +496,9 @@ const Home = () => {
               </div>
 
               {/* Element 2 - Thiết bị thể thao */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
-                  <FaBicycle className="text-gray-600 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gray-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaBicycle className="text-gray-600 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-gray-800 text-xs font-medium">Thể thao</div>
@@ -450,9 +506,9 @@ const Home = () => {
               </div>
 
               {/* Element 3 - Đồ ăn vặt */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-2">
-                  <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-yellow-400 rounded flex items-center justify-center">
                     <span className="text-yellow-800 text-xs font-bold">L</span>
                   </div>
                 </div>
@@ -462,9 +518,9 @@ const Home = () => {
               </div>
 
               {/* Element 4 - Chaodiandigital */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-                  <FaCamera className="text-blue-500 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaCamera className="text-blue-500 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-gray-800 text-xs font-medium">Điện tử</div>
@@ -472,9 +528,9 @@ const Home = () => {
               </div>
 
               {/* Element 5 - Ngôi nhà mát */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
-                  <FaFan className="text-green-500 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaFan className="text-green-500 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-gray-800 text-xs font-medium">Gia dụng</div>
@@ -482,9 +538,9 @@ const Home = () => {
               </div>
 
               {/* Element 6 - Trang phục */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-2">
-                  <FaTshirt className="text-purple-500 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaTshirt className="text-purple-500 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-gray-800 text-xs font-medium">Thời trang</div>
@@ -492,9 +548,9 @@ const Home = () => {
               </div>
 
               {/* Element 7 - Chăm sóc */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mb-2">
-                  <FaGem className="text-pink-500 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-pink-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaGem className="text-pink-500 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-gray-800 text-xs font-medium">Làm đẹp</div>
@@ -502,9 +558,9 @@ const Home = () => {
               </div>
 
               {/* Element 8 - Placeholder */}
-              <div className="flex flex-col items-center p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
-                  <FaEllipsisH className="text-gray-500 text-lg" />
+              <div className="flex flex-col items-center p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gray-100 rounded-full flex items-center justify-center mb-1 sm:mb-2">
+                  <FaEllipsisH className="text-gray-500 text-sm sm:text-base md:text-lg" />
                 </div>
                 <div className="text-center">
                   <div className="text-gray-800 text-xs font-medium">Xem thêm</div>
@@ -531,13 +587,13 @@ const Home = () => {
             </div>
             
             {/* Products Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
               {featuredProducts && featuredProducts.length > 0 ? (
-                featuredProducts.map((product) => (
+                featuredProducts.slice(0, 5).map((product) => (
                   <ProductCard key={product.product_id} product={product} />
                 ))
               ) : (
-                <div className="col-span-6 text-center text-gray-500">
+                <div className="col-span-5 text-center text-gray-500">
                   Không có sản phẩm nào để hiển thị
                 </div>
               )}

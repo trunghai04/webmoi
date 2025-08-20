@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
+import io from 'socket.io-client';
 
 const Header = ({
   isScrolled,
@@ -32,8 +33,12 @@ const Header = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCartDropdown, setShowCartDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const navigate = useNavigate();
   const userMenuRef = useRef(null);
+  const socketRef = useRef(null);
+  const API_BASE = 'http://localhost:5000';
 
   const handleLogout = () => {
     logout();
@@ -52,39 +57,66 @@ const Header = ({
     return () => document.removeEventListener('mousedown', handleDocumentClick);
   }, [showUserDropdown]);
 
-  // Mock notification data
-  const notifications = [
-    {
-      id: 1,
-      title: "Đơn hàng đã được xác nhận",
-      message: "Đơn hàng #12345 của bạn đã được xác nhận và đang được xử lý",
-      time: "2 phút trước",
-      isRead: false,
-    },
-    {
-      id: 2,
-      title: "Flash Sale sắp bắt đầu",
-      message: "Flash Sale 20:00 - 22:00 hôm nay với giảm giá lên đến 70%",
-      time: "15 phút trước",
-      isRead: false,
-    },
-    {
-      id: 3,
-      title: "Sản phẩm yêu thích giảm giá",
-      message: "Sản phẩm bạn đã thích giảm giá 30% - Mua ngay!",
-      time: "1 giờ trước",
-      isRead: true,
-    },
-    {
-      id: 4,
-      title: "Chào mừng bạn đến với MuaSamViet",
-      message: "Cảm ơn bạn đã đăng ký tài khoản. Chúc bạn mua sắm vui vẻ!",
-      time: "2 giờ trước",
-      isRead: true,
-    },
-  ];
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    if (!isAuthenticated || !user) return;
+    
+    setLoadingNotifications(true);
+    try {
+      const token = localStorage.getItem('msv_auth') ? JSON.parse(localStorage.getItem('msv_auth')).token : '';
+      const response = await fetch('http://localhost:5000/api/chat/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Socket.IO connection for real-time notifications
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    socketRef.current = io(API_BASE, { withCredentials: true });
+    socketRef.current.emit('join', {
+      userId: user.id,
+      username: user.username,
+      role: user.role
+    });
+
+    socketRef.current.on('admin_notification', (notification) => {
+      // Add new notification to the list
+      setNotifications(prev => [{
+        id: Date.now(),
+        title: notification.title,
+        content: notification.content,
+        type: notification.type,
+        created_at: notification.created_at,
+        is_read: false
+      }, ...prev]);
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, [isAuthenticated, user, API_BASE]);
+
+  // Fetch notifications on mount only
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchNotifications();
+    }
+  }, []); // Empty dependency array - only run once on mount
+
+  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.is_read).length : 0;
 
   return (
     <>
@@ -170,9 +202,9 @@ const Header = ({
                 <div className="flex items-center space-x-1 hover:text-orange-500">
                   <div className="relative">
                     <FaShoppingCart className="text-sm" />
-                    {cartItems.length > 0 && (
+                    {cartItems && cartItems.length > 0 && (
                       <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {cartItems.length}
+                        {cartItems ? cartItems.length : 0}
                       </span>
                     )}
                   </div>
@@ -248,9 +280,9 @@ const Header = ({
                              onMouseLeave={() => setShowCartDropdown(false)}
                            >
                              <FaShoppingCart className="text-gray-600 text-xl" />
-                             {cartItems.length > 0 && (
+                             {cartItems && cartItems.length > 0 && (
                                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                                 {cartItems.length}
+                                 {cartItems ? cartItems.length : 0}
                                </span>
                              )}
                            </div>
@@ -272,7 +304,7 @@ const Header = ({
                                </div>
                              </div>
                              <div className="max-h-96 overflow-y-auto">
-                               {cartItems.length === 0 ? (
+                               {!cartItems || cartItems.length === 0 ? (
                                  <div className="p-4 text-center text-gray-500">
                                    <div className="text-4xl mb-2">🛒</div>
                                    <p>Giỏ hàng trống</p>
@@ -312,7 +344,7 @@ const Header = ({
                                  ))
                                )}
                              </div>
-                             {cartItems.length > 0 && (
+                             {cartItems && cartItems.length > 0 && (
                                <div className="p-3 border-t border-gray-100">
                                  <div className="flex items-center justify-between mb-2">
                                    <span className="text-sm text-gray-600">Tổng cộng:</span>
@@ -359,33 +391,46 @@ const Header = ({
                                 </div>
                               </div>
                               <div className="max-h-96 overflow-y-auto">
-                                {notifications.map((notification) => (
-                                  <div
-                                    key={notification.id}
-                                    className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                                      !notification.isRead ? 'bg-orange-50' : ''
-                                    }`}
-                                  >
-                                    <div className="flex items-start space-x-3">
-                                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                                        notification.isRead ? 'bg-gray-300' : 'bg-orange-500'
-                                      }`}></div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                          <h4 className={`text-sm font-medium ${
-                                            notification.isRead ? 'text-gray-600' : 'text-gray-800'
-                                          }`}>
-                                            {notification.title}
-                                          </h4>
-                                          <span className="text-xs text-gray-400">{notification.time}</span>
+                                {loadingNotifications ? (
+                                  <div className="p-4 text-center text-gray-500">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                                    Đang tải thông báo...
+                                  </div>
+                                ) : !Array.isArray(notifications) || notifications.length === 0 ? (
+                                  <div className="p-4 text-center text-gray-500 text-sm">
+                                    Không có thông báo mới
+                                  </div>
+                                ) : (
+                                  notifications.map((notification) => (
+                                    <div
+                                      key={notification.id}
+                                      className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                                        !notification.is_read ? 'bg-orange-50' : ''
+                                      }`}
+                                    >
+                                      <div className="flex items-start space-x-3">
+                                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                          notification.is_read ? 'bg-gray-300' : 'bg-orange-500'
+                                        }`}></div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center justify-between">
+                                            <h4 className={`text-sm font-medium ${
+                                              notification.is_read ? 'text-gray-600' : 'text-gray-800'
+                                            }`}>
+                                              {notification.title}
+                                            </h4>
+                                            <span className="text-xs text-gray-400">
+                                              {new Date(notification.created_at).toLocaleString('vi-VN')}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                                            {notification.content}
+                                          </p>
                                         </div>
-                                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                          {notification.message}
-                                        </p>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))
+                                )}
                               </div>
                               <div className="p-3 border-t border-gray-100">
                                 <Link
@@ -461,9 +506,9 @@ const Header = ({
                      onMouseLeave={() => setShowCartDropdown(false)}
                    >
                      <FaShoppingCart className="text-gray-600 text-xl" />
-                     {cartItems.length > 0 && (
+                     {cartItems && cartItems.length > 0 && (
                        <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                         {cartItems.length}
+                         {cartItems ? cartItems.length : 0}
                        </span>
                      )}
                    </div>
@@ -485,7 +530,7 @@ const Header = ({
                       </div>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
-                      {cartItems.length === 0 ? (
+                      {!cartItems || cartItems.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           <div className="text-4xl mb-2">🛒</div>
                           <p>Giỏ hàng trống</p>
@@ -525,7 +570,7 @@ const Header = ({
                         ))
                       )}
                     </div>
-                    {cartItems.length > 0 && (
+                    {cartItems && cartItems.length > 0 && (
                       <div className="p-3 border-t border-gray-100">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm text-gray-600">Tổng cộng:</span>

@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useContext } from "react";
+import { AuthContext } from "../../../context/AuthContext";
 
 const PrivacySettings = () => {
+  const { user } = useContext(AuthContext);
+  
   const handleDeleteAccount = () => {
     // Handle account deletion logic
-    console.log("Requesting account deletion");
+    console.log("Requesting account deletion for user:", user?.username);
   };
 
   return (

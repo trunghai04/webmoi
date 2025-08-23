@@ -1,23 +1,26 @@
-import React, { useState, useContext } from "react";
-import { FaCamera, FaQuestionCircle, FaUser } from "react-icons/fa";
+import React, { useState, useContext, useRef } from "react";
+import { FaCamera, FaQuestionCircle, FaUser, FaSpinner } from "react-icons/fa";
 import { AuthContext } from "../../../context/AuthContext";
 import useNotification from "../../../hooks/useNotification";
 import NotificationPopup from "../../../components/NotificationPopup";
 
 const Profile = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateUser } = useContext(AuthContext);
   const { notification, showSuccess, showError, hideNotification } = useNotification();
+  const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
-    username: user?.username || "",
-    name: user?.name || user?.username || "",
+    full_name: user?.full_name || user?.username || "",
     email: user?.email || "",
     phone: user?.phone || "",
     gender: user?.gender || "",
-    birthDate: user?.birthDate || ""
+    birth_date: user?.birth_date || "",
+    address: user?.address || ""
   });
 
   const [avatar, setAvatar] = useState(user?.avatar || null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -29,32 +32,115 @@ const Profile = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file size (1MB)
+      if (file.size > 1024 * 1024) {
+        showError('File quá lớn. Kích thước tối đa là 1MB.');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showError('Chỉ chấp nhận file hình ảnh.');
+        return;
+      }
+
+      setAvatarFile(file);
       setAvatar(URL.createObjectURL(file));
     }
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const uploadAvatar = async () => {
+    if (!avatarFile) return null;
+
+    const formData = new FormData();
+    formData.append('avatar', avatarFile);
+
+    try {
+      const token = JSON.parse(localStorage.getItem('msv_auth')).token;
+      const response = await fetch('http://localhost:5000/api/auth/avatar', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data.avatar;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Lỗi upload avatar');
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      throw error;
+    }
+  };
+
   const handleSave = async () => {
+    setIsLoading(true);
     try {
       console.log("Saving profile:", formData);
       
-      // Simulate API call
+      const token = JSON.parse(localStorage.getItem('msv_auth')).token;
+      
+      // Upload avatar first if there's a new one
+      let newAvatarPath = null;
+      if (avatarFile) {
+        try {
+          newAvatarPath = await uploadAvatar();
+          showSuccess('Avatar đã được cập nhật thành công!');
+        } catch (error) {
+          showError('Lỗi upload avatar: ' + error.message);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Update profile information
+      const profileData = {
+        ...formData,
+        avatar: newAvatarPath || user?.avatar
+      };
+
       const response = await fetch('http://localhost:5000/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('msv_auth')).token}`
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(profileData)
       });
       
       if (response.ok) {
+        const data = await response.json();
         showSuccess('Hồ sơ đã được cập nhật thành công!');
+        
+        // Update local user data
+        if (updateUser) {
+          updateUser({
+            ...user,
+            ...formData,
+            avatar: newAvatarPath || user?.avatar
+          });
+        }
+        
+        // Reset avatar file
+        setAvatarFile(null);
       } else {
-        showError('Có lỗi xảy ra khi cập nhật hồ sơ');
+        const errorData = await response.json();
+        showError(errorData.message || 'Có lỗi xảy ra khi cập nhật hồ sơ');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
       showError('Có lỗi xảy ra khi cập nhật hồ sơ');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,28 +161,27 @@ const Profile = () => {
             </label>
             <input
               type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              value={user?.username || ""}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50"
               readOnly
             />
             <p className="text-xs text-gray-500 mt-1">
-              Tên Đăng nhập chỉ có thể thay đổi một lần.
+              Tên đăng nhập không thể thay đổi.
             </p>
           </div>
 
-          {/* Name */}
+          {/* Full Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tên
+              Họ và tên
             </label>
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="full_name"
+              value={formData.full_name}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Nhập họ và tên"
             />
           </div>
 
@@ -105,18 +190,14 @@ const Profile = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email
             </label>
-            {formData.email ? (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-800">{formData.email}</span>
-                <button className="text-blue-600 hover:text-blue-700 text-sm">
-                  Thay Đổi
-                </button>
-              </div>
-            ) : (
-              <button className="text-blue-600 hover:text-blue-700 text-sm">
-                Thêm
-              </button>
-            )}
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Nhập email"
+            />
           </div>
 
           {/* Phone */}
@@ -124,12 +205,29 @@ const Profile = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Số điện thoại
             </label>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-800">{formData.phone}</span>
-              <button className="text-blue-600 hover:text-blue-700 text-sm">
-                Thay Đổi
-              </button>
-            </div>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Nhập số điện thoại"
+            />
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Địa chỉ
+            </label>
+            <textarea
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Nhập địa chỉ"
+            />
           </div>
 
           {/* Gender */}
@@ -161,46 +259,56 @@ const Profile = () => {
               Ngày sinh
               <FaQuestionCircle className="text-gray-400 text-xs" />
             </label>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-800">{formData.birthDate}</span>
-              <button className="text-blue-600 hover:text-blue-700 text-sm">
-                Thay Đổi
-              </button>
-            </div>
+            <input
+              type="date"
+              name="birth_date"
+              value={formData.birth_date}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
           </div>
 
           {/* Save Button */}
           <div className="pt-4">
             <button
               onClick={handleSave}
-              className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+              disabled={isLoading}
+              className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Lưu
+              {isLoading && <FaSpinner className="animate-spin" />}
+              {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
           </div>
         </div>
 
         {/* Avatar Section */}
         <div className="w-48 flex flex-col items-center">
-          <div className="w-32 h-32 bg-gray-300 rounded-full mb-4 flex items-center justify-center overflow-hidden">
+          <div 
+            className="w-32 h-32 bg-gray-300 rounded-full mb-4 flex items-center justify-center overflow-hidden cursor-pointer"
+            onClick={handleAvatarClick}
+          >
             {avatar ? (
               <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <FaCamera className="text-gray-500 text-3xl" />
+              <FaUser className="text-gray-500 text-3xl" />
             )}
+
           </div>
           
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-            <div className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-center">
-              Chọn Ảnh
-            </div>
-          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+          
+          <button
+            onClick={handleAvatarClick}
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-center"
+          >
+            Chọn Ảnh
+          </button>
           
           <div className="mt-4 text-xs text-gray-500 text-center space-y-1">
             <p>Dụng lượng file tối đa 1 MB</p>

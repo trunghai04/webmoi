@@ -4,7 +4,34 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>MuaSamViet - Mua sắm trực tuyến</title>
+    
+    <!-- Facebook SDK -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/vi_VN/sdk.js"></script>
+    
+    <!-- Google Sign-In SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Facebook SDK Configuration -->
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId: '2896035803928889',
+          cookie: true,
+          xfbml: true,
+          version: 'v18.0'
+        });
+      };
+    </script>
+    
+    <!-- Google OAuth Configuration -->
+    <script>
+      window.googleOAuthConfig = {
+        client_id: '982533581787-djhi8juujp3jsmhv76a3ij7he7jlb0i4.apps.googleusercontent.com',
+        redirect_uri: window.location.origin,
+        scope: 'email profile'
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

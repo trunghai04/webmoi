@@ -28,6 +28,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
 import TestCheckout from './pages/TestCheckout'
 import TestBuyNow from './pages/TestBuyNow'
+import OrderDetail from './pages/user/OrderDetail'
 
 
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/user/*" element={<MyAccount />} />
+            <Route path="/user/orders/:orderId" element={<OrderDetail />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/partner" element={<PartnerDashboard />} />
             <Route path="/feedback" element={<Feedback />} />

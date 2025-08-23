@@ -4,6 +4,8 @@ const { validationRules, handleValidationErrors } = require('../middleware/valid
 // Get all products with filters
 const getAllProducts = async (req, res) => {
   try {
+    console.log('getAllProducts called with query:', req.query);
+    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     
@@ -19,7 +21,14 @@ const getAllProducts = async (req, res) => {
       sort_order: req.query.sort_order
     };
     
+    console.log('getAllProducts filters:', filters);
+    
     const result = await Product.getAll(page, limit, filters);
+    
+    console.log('getAllProducts result:', { 
+      productsCount: result.products?.length || 0,
+      pagination: result.pagination 
+    });
     
     res.json({
       success: true,

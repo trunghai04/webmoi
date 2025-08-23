@@ -6,6 +6,7 @@ import { CartContext } from "../../context/CartContext";
 import { toast } from "react-toastify";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import SocialLogin from "../../components/SocialLogin";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,6 +22,40 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [socialLoginLoading, setSocialLoginLoading] = useState(false);
+
+  // Handle social login success
+  const handleSocialLoginSuccess = useCallback(() => {
+    setSocialLoginLoading(false);
+    toast.success("Đăng nhập thành công!");
+    // Role-based redirect
+    // Note: Social login user role will be determined by the server
+    navigate('/');
+  }, [navigate]);
+
+  const handleSocialLoginError = useCallback((error) => {
+    setSocialLoginLoading(false);
+    console.error('Social login error:', error);
+    
+    // Handle undefined error
+    if (!error) {
+      toast.error("Đăng nhập thất bại! Vui lòng thử lại sau.");
+      return;
+    }
+    
+    // Handle specific error types
+    if (error?.message?.includes('Facebook SDK')) {
+      toast.error('Facebook đăng nhập tạm thời không khả dụng. Vui lòng thử lại sau.');
+    } else if (error?.message?.includes('Google')) {
+      toast.error('Google đăng nhập tạm thời không khả dụng. Vui lòng thử lại sau.');
+    } else {
+      toast.error(error?.message || "Đăng nhập thất bại!");
+    }
+  }, []);
+
+  const handleSocialLoginStart = useCallback(() => {
+    setSocialLoginLoading(true);
+  }, []);
 
   // Handle scroll effect
   useEffect(() => {
@@ -211,16 +246,11 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                  <FaGoogle className="h-5 w-5 text-red-500" />
-                  <span className="ml-2">Google</span>
-                </button>
-
-                <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                  <FaFacebook className="h-5 w-5 text-blue-600" />
-                  <span className="ml-2">Facebook</span>
-                </button>
+              <div className="mt-6">
+                <SocialLogin 
+                  onSuccess={handleSocialLoginSuccess}
+                  onClose={handleSocialLoginError}
+                />
               </div>
             </div>
           </div>

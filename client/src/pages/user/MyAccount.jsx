@@ -14,9 +14,7 @@ import {
   FaCog,
   FaShieldAlt,
   FaIdCard,
-  FaCamera,
-  FaMoon,
-  FaSun
+  FaCamera
 } from "react-icons/fa";
 import { AuthContext } from "../../context/AuthContext";
 import { CartContext } from "../../context/CartContext";
@@ -34,6 +32,8 @@ import AccountOverview from "./sections/AccountOverview";
 import Orders from "./sections/Orders";
 import Vouchers from "./sections/Vouchers";
 import Coins from "./sections/Coins";
+import Rewards from "./sections/Rewards";
+import TransactionHistory from "./sections/TransactionHistory";
 
 const MyAccount = () => {
   const { isAuthenticated, user } = useContext(AuthContext);
@@ -42,7 +42,6 @@ const MyAccount = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [darkMode, setDarkMode] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Use user from context or fallback to default
@@ -122,22 +121,18 @@ const MyAccount = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4">
-        <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full transform transition-all duration-300 hover:scale-105">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-xl max-w-md w-full transform transition-all duration-300 hover:scale-105">
           <div className="w-20 h-20 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full mx-auto mb-6 flex items-center justify-center">
             <FaLock className="text-white text-3xl" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Vui lòng đăng nhập</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">Bạn cần đăng nhập để truy cập trang tài khoản</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Vui lòng đăng nhập</h1>
+          <p className="text-gray-600 mb-6">Bạn cần đăng nhập để truy cập trang tài khoản</p>
           <Link 
             to="/auth/login" 
             className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md hover:shadow-lg inline-block"
@@ -150,7 +145,7 @@ const MyAccount = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-gray-50">
       <Header
         isScrolled={isScrolled}
         mobileMenuOpen={mobileMenuOpen}
@@ -172,46 +167,40 @@ const MyAccount = () => {
         <div className="lg:hidden mb-4 flex justify-between items-center">
           <button 
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md flex items-center gap-2"
+            className="bg-white p-3 rounded-lg shadow-md flex items-center gap-2"
           >
             <FaUser className="text-orange-500" />
             <span className="font-medium">Menu tài khoản</span>
             <FaChevronRight className={`text-xs transition-transform ${mobileNavOpen ? 'rotate-90' : ''}`} />
           </button>
-          <button 
-            onClick={toggleDarkMode}
-            className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md"
-          >
-            {darkMode ? <FaSun className="text-yellow-500" /> : <FaMoon className="text-gray-700" />}
-          </button>
         </div>
 
         <div className="flex gap-6">
           {/* Left Sidebar */}
-          <aside className={`w-64 transition-all duration-300 ${mobileNavOpen ? 'block fixed lg:static inset-0 z-50 bg-white dark:bg-gray-800 p-4 overflow-y-auto' : 'hidden'} lg:block`}>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-700">
+          <aside className={`w-64 transition-all duration-300 ${mobileNavOpen ? 'block fixed lg:static inset-0 z-50 bg-white p-4 overflow-y-auto' : 'hidden'} lg:block`}>
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
               {/* User Profile Section */}
-              <div className="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="text-center mb-6 pb-4 border-b border-gray-200">
                 <div className="relative w-20 h-20 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center overflow-hidden">
                   {currentUser.avatar ? (
                     <img src={currentUser.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                   ) : (
                     <FaUser className="text-white text-3xl" />
                   )}
-                  <button className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 p-1 rounded-full shadow-md border border-gray-200 dark:border-gray-600">
-                    <FaCamera className="text-gray-600 dark:text-gray-300 text-xs" />
+                  <button className="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow-md border border-gray-200">
+                    <FaCamera className="text-gray-600 text-xs" />
                   </button>
                 </div>
-                <div className="font-semibold text-gray-800 dark:text-white mb-1">{currentUser.username}</div>
+                <div className="font-semibold text-gray-800 mb-1">{currentUser.username}</div>
                 {currentUser.email && (
-                  <div className="text-gray-500 dark:text-gray-400 text-xs mb-2">{currentUser.email}</div>
+                  <div className="text-gray-500 text-xs mb-2">{currentUser.email}</div>
                 )}
                 {currentUser.phone && (
-                  <div className="text-gray-500 dark:text-gray-400 text-xs mb-2">{currentUser.phone}</div>
+                  <div className="text-gray-500 text-xs mb-2">{currentUser.phone}</div>
                 )}
                 <Link 
                   to="/user/account/profile" 
-                  className="text-gray-500 dark:text-gray-400 text-sm hover:text-orange-500 dark:hover:text-orange-400 flex items-center justify-center gap-1 transition-colors"
+                  className="text-gray-500 text-sm hover:text-orange-500 flex items-center justify-center gap-1 transition-colors"
                 >
                   <FaEdit className="text-xs" />
                   Sửa Hồ Sơ
@@ -226,8 +215,8 @@ const MyAccount = () => {
                       to={item.path}
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-300 group ${
                         isActive(item.path) || (item.subItems && item.subItems.some(sub => isSubActive(sub.path)))
-                          ? "bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 text-orange-600 dark:text-orange-400 shadow-sm"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          ? "bg-gradient-to-r from-orange-50 to-orange-100 text-orange-600 shadow-sm"
+                          : "text-gray-700 hover:bg-gray-50"
                       }`}
                       onClick={() => window.innerWidth < 1024 && item.id !== 'account' && setMobileNavOpen(false)}
                     >
@@ -249,8 +238,8 @@ const MyAccount = () => {
                             to={subItem.path}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
                               isSubActive(subItem.path)
-                                ? "text-orange-500 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20"
-                                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                ? "text-orange-500 font-medium bg-orange-50"
+                                : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                             }`}
                             onClick={() => window.innerWidth < 1024 && setMobileNavOpen(false)}
                           >
@@ -264,25 +253,7 @@ const MyAccount = () => {
                 ))}
               </nav>
 
-              {/* Dark mode toggle for desktop */}
-              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 hidden lg:block">
-                <button 
-                  onClick={toggleDarkMode}
-                  className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  {darkMode ? (
-                    <>
-                      <FaSun className="text-lg text-yellow-500" />
-                      <span>Chế độ sáng</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaMoon className="text-lg text-gray-700" />
-                      <span>Chế độ tối</span>
-                    </>
-                  )}
-                </button>
-              </div>
+
 
               {/* Close button for mobile */}
               {mobileNavOpen && (
@@ -306,7 +277,7 @@ const MyAccount = () => {
 
           {/* Main Content */}
           <main className="flex-1">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <Routes>
                 <Route path="account" element={<AccountOverview />} />
                 <Route path="account/profile" element={<Profile />} />
@@ -319,6 +290,8 @@ const MyAccount = () => {
                 <Route path="orders" element={<Orders />} />
                 <Route path="vouchers" element={<Vouchers />} />
                 <Route path="coins" element={<Coins />} />
+                <Route path="rewards" element={<Rewards />} />
+                <Route path="transaction-history" element={<TransactionHistory />} />
                 <Route path="*" element={<AccountOverview />} />
               </Routes>
             </div>

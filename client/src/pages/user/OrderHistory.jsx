@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../../context/AuthContext';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { getProductImage, handleImageError } from '../../utils/imageUtils';
 import { 
   FaBox, 
   FaTruck, 
@@ -18,10 +19,7 @@ import {
   FaRegStar,
   FaSearch,
   FaFilter,
-  FaCalendarAlt,
-  FaMapMarkerAlt,
-  FaPhone,
-  FaEnvelope
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const OrderHistory = () => {
@@ -33,8 +31,7 @@ const OrderHistory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [showOrderDetail, setShowOrderDetail] = useState(false);
+
 
   // Mock order data
   const mockOrders = [
@@ -50,7 +47,7 @@ const OrderHistory = () => {
           name: 'iPhone 15 Pro Max',
           price: 29990000,
           quantity: 1,
-          image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400'
+          image: getProductImage('https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400', 80, 80)
         }
       ],
       shippingAddress: {
@@ -75,7 +72,7 @@ const OrderHistory = () => {
           name: 'MacBook Air M2',
           price: 25990000,
           quantity: 1,
-          image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400'
+          image: getProductImage('https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400', 80, 80)
         }
       ],
       shippingAddress: {
@@ -151,6 +148,8 @@ const OrderHistory = () => {
     }, 1000);
   }, [isAuthenticated, navigate]);
 
+
+
   // Filter orders
   useEffect(() => {
     let filtered = orders.filter(order =>
@@ -165,7 +164,7 @@ const OrderHistory = () => {
     setFilteredOrders(filtered);
   }, [orders, searchQuery, statusFilter]);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     switch (status) {
       case 'delivered':
         return 'text-green-600 bg-green-100';
@@ -178,9 +177,9 @@ const OrderHistory = () => {
       default:
         return 'text-gray-600 bg-gray-100';
     }
-  };
+  }, []);
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = useCallback((status) => {
     switch (status) {
       case 'delivered':
         return <FaCheckCircle className="text-green-600" />;
@@ -193,36 +192,37 @@ const OrderHistory = () => {
       default:
         return <FaBox className="text-gray-600" />;
     }
-  };
+  }, []);
 
-  const handleViewOrderDetail = (order) => {
-    setSelectedOrder(order);
-    setShowOrderDetail(true);
-  };
+  const handleViewOrderDetail = useCallback((order) => {
+    navigate(`/user/orders/${order.id}`);
+  }, [navigate]);
 
-  const handleDownloadInvoice = (orderId) => {
+
+
+  const handleDownloadInvoice = useCallback((orderId) => {
     toast.info('Đang tải hóa đơn...');
     setTimeout(() => {
       toast.success('Đã tải hóa đơn thành công!');
     }, 2000);
-  };
+  }, []);
 
-  const handlePrintInvoice = (orderId) => {
+  const handlePrintInvoice = useCallback((orderId) => {
     window.print();
-  };
+  }, []);
 
-  const handleReviewProduct = (orderId, itemId) => {
+  const handleReviewProduct = useCallback((orderId, itemId) => {
     navigate(`/product/${itemId}?review=true`);
-  };
+  }, [navigate]);
 
-  const formatPrice = (price) => {
+  const formatPrice = useCallback((price) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
     }).format(price);
-  };
+  }, []);
 
-  const formatDate = (date) => {
+  const formatDate = useCallback((date) => {
     return new Intl.DateTimeFormat('vi-VN', {
       year: 'numeric',
       month: 'long',
@@ -230,9 +230,9 @@ const OrderHistory = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(date));
-  };
+  }, []);
 
-  const renderStars = (rating) => {
+  const renderStars = useCallback((rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
@@ -251,7 +251,7 @@ const OrderHistory = () => {
     }
 
     return stars;
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -266,7 +266,7 @@ const OrderHistory = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Header isOrderPage={true} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -383,6 +383,7 @@ const OrderHistory = () => {
                             src={item.image}
                             alt={item.name}
                             className="w-16 h-16 object-cover rounded-md"
+                            onError={(e) => handleImageError(e, getProductImage(null, 80, 80))}
                           />
                           <div className="flex-1">
                             <h4 className="font-medium">{item.name}</h4>
@@ -408,11 +409,13 @@ const OrderHistory = () => {
                       <div className="flex items-center space-x-4">
                         <button
                           onClick={() => handleViewOrderDetail(order)}
-                          className="flex items-center text-blue-600 hover:text-blue-700"
+                          className="flex items-center text-blue-600 hover:text-blue-700 cursor-pointer px-3 py-1 rounded hover:bg-blue-50"
+                          type="button"
                         >
                           <FaEye className="mr-2" />
                           Xem chi tiết
                         </button>
+
                         <button
                           onClick={() => handleDownloadInvoice(order.id)}
                           className="flex items-center text-gray-600 hover:text-gray-700"
@@ -443,125 +446,6 @@ const OrderHistory = () => {
         </div>
       </div>
 
-      {/* Order Detail Modal */}
-      {showOrderDetail && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Chi tiết đơn hàng {selectedOrder.id}</h2>
-                <button
-                  onClick={() => setShowOrderDetail(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Order Status */}
-              <div className="mb-6">
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className={`p-2 rounded-full ${getStatusColor(selectedOrder.status)}`}>
-                    {getStatusIcon(selectedOrder.status)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold">{selectedOrder.statusText}</h3>
-                    <p className="text-gray-600">Đặt hàng: {formatDate(selectedOrder.orderDate)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Shipping Information */}
-              <div className="mb-6">
-                <h3 className="font-bold mb-3 flex items-center">
-                  <FaMapMarkerAlt className="mr-2 text-blue-600" />
-                  Thông tin giao hàng
-                </h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="font-medium">{selectedOrder.shippingAddress.fullName}</p>
-                  <p className="text-gray-600">{selectedOrder.shippingAddress.phone}</p>
-                  <p className="text-gray-600">{selectedOrder.shippingAddress.address}</p>
-                </div>
-              </div>
-
-              {/* Payment Information */}
-              <div className="mb-6">
-                <h3 className="font-bold mb-3">Thông tin thanh toán</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p><span className="font-medium">Phương thức:</span> {selectedOrder.paymentMethod}</p>
-                  <p><span className="font-medium">Tổng tiền:</span> {formatPrice(selectedOrder.total)}</p>
-                </div>
-              </div>
-
-              {/* Order Items */}
-              <div className="mb-6">
-                <h3 className="font-bold mb-3">Sản phẩm đã đặt</h3>
-                <div className="space-y-3">
-                  {selectedOrder.items.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-4 bg-gray-50 p-4 rounded-lg">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-md"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium">{item.name}</h4>
-                        <p className="text-gray-600">Số lượng: {item.quantity}</p>
-                        <p className="text-gray-800 font-medium">
-                          {formatPrice(item.price * item.quantity)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Additional Information */}
-              {selectedOrder.deliveredDate && (
-                <div className="mb-6">
-                  <h3 className="font-bold mb-3">Thông tin giao hàng</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p><span className="font-medium">Ngày giao:</span> {formatDate(selectedOrder.deliveredDate)}</p>
-                    {selectedOrder.trackingNumber && (
-                      <p><span className="font-medium">Mã theo dõi:</span> {selectedOrder.trackingNumber}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selectedOrder.cancelReason && (
-                <div className="mb-6">
-                  <h3 className="font-bold mb-3">Lý do hủy</h3>
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <p className="text-red-800">{selectedOrder.cancelReason}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => setShowOrderDetail(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Đóng
-                </button>
-                <button
-                  onClick={() => handleDownloadInvoice(selectedOrder.id)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Tải hóa đơn
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-      
       <Footer />
     </div>
   );

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { sendEmail, emailTemplates } = require('../config/email');
 
@@ -149,6 +150,15 @@ const login = async (req, res) => {
 // Get current user profile
 const getProfile = async (req, res) => {
   try {
+    console.log('Get profile request for user ID:', req.user.id);
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({
@@ -156,6 +166,8 @@ const getProfile = async (req, res) => {
         message: 'User not found'
       });
     }
+
+    console.log('User found:', { id: user.id, username: user.username, email: user.email });
 
     res.json({
       success: true,
@@ -177,7 +189,8 @@ const getProfile = async (req, res) => {
     console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -186,16 +199,20 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     console.log('Update profile request body:', req.body);
-    const { full_name, phone, birth_date, address } = req.body;
+    const { full_name, email, phone, gender, birth_date, address, avatar } = req.body;
     
-    console.log('Extracted data:', { full_name, phone, birth_date, address });
+    console.log('Extracted data:', { full_name, email, phone, gender, birth_date, address, avatar });
     
-    const success = await User.updateProfile(req.user.id, {
-      full_name,
-      phone,
-      birth_date,
-      address
-    });
+    const updateData = {};
+    if (full_name !== undefined) updateData.full_name = full_name;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (gender !== undefined) updateData.gender = gender;
+    if (birth_date !== undefined) updateData.birth_date = birth_date;
+    if (address !== undefined) updateData.address = address;
+    if (avatar !== undefined) updateData.avatar = avatar;
+    
+    const success = await User.updateProfile(req.user.id, updateData);
 
     if (!success) {
       return res.status(400).json({
@@ -204,9 +221,15 @@ const updateProfile = async (req, res) => {
       });
     }
 
+    // Get updated user data
+    const updatedUser = await User.findById(req.user.id);
+    
     res.json({
       success: true,
-      message: 'Cập nhật thành công!'
+      message: 'Cập nhật thành công!',
+      data: {
+        user: updatedUser
+      }
     });
   } catch (error) {
     console.error('Update profile error:', error);
@@ -467,6 +490,166 @@ const logout = async (req, res) => {
   }
 };
 
+// Google OAuth login
+const googleLogin = async (req, res) => {
+  try {
+    const { accessToken, userID, userName, userEmail, userPicture } = req.body;
+    
+    if (!accessToken || !userID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access token and user ID are required'
+      });
+    }
+
+    // For development, skip Google token verification
+    console.log('Processing Google login for userID:', userID);
+    console.log('User name from Google:', userName);
+    console.log('User email from Google:', userEmail);
+    
+    // Use userID as Google ID and user data from Google API
+    const googleId = userID;
+    const name = userName || 'Google User';
+    const email = userEmail || `${googleId}@google.com`;
+    const avatar = userPicture || null;
+
+    // Check if user exists by Google ID
+    let user = await User.findByGoogleId(googleId);
+    
+    if (!user) {
+      // Check if user exists by email
+      if (email) {
+        user = await User.findByEmail(email);
+      }
+      
+      if (user) {
+        // Update existing user with Google ID
+        await User.createOrUpdateSocialUser({
+          email: email || user.email,
+          full_name: name,
+          google_id: googleId,
+          avatar: avatar || user.avatar
+        });
+        user = await User.findByGoogleId(googleId);
+      } else {
+        // Create new user
+        const userId = await User.createOrUpdateSocialUser({
+          email: email || `${googleId}@google.com`,
+          full_name: name,
+          google_id: googleId,
+          avatar
+        });
+        user = await User.findById(userId);
+      }
+    }
+
+    // Generate token
+    const token = generateToken(user.id);
+
+    res.json({
+      success: true,
+      message: 'Đăng nhập Google thành công!',
+      data: {
+        user: {
+          id: user.id,
+          username: user.full_name, // Use full_name instead of username for display
+          email: user.email,
+          phone: user.phone,
+          full_name: user.full_name,
+          role: user.role,
+          avatar: user.avatar
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Đăng nhập Google thất bại. Vui lòng thử lại sau.'
+    });
+  }
+};
+
+// Facebook OAuth login
+const facebookLogin = async (req, res) => {
+  try {
+    const { accessToken, userID } = req.body;
+    
+    if (!accessToken || !userID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access token and user ID are required'
+      });
+    }
+
+    // For development, skip Facebook token verification
+    console.log('Processing Facebook login for userID:', userID);
+    
+    // Use userID as Facebook ID and create a basic user profile
+    const facebookId = userID;
+    const name = 'Facebook User';
+    const email = `${facebookId}@facebook.com`;
+    const avatar = null;
+
+    // Check if user exists by Facebook ID
+    let user = await User.findByFacebookId(facebookId);
+    
+    if (!user) {
+      // Check if user exists by email
+      if (email) {
+        user = await User.findByEmail(email);
+      }
+      
+      if (user) {
+        // Update existing user with Facebook ID
+        await User.createOrUpdateSocialUser({
+          email: email || user.email,
+          full_name: name,
+          facebook_id: facebookId,
+          avatar: avatar || user.avatar
+        });
+        user = await User.findByFacebookId(facebookId);
+      } else {
+        // Create new user
+        const userId = await User.createOrUpdateSocialUser({
+          email: email || `${facebookId}@facebook.com`,
+          full_name: name,
+          facebook_id: facebookId,
+          avatar
+        });
+        user = await User.findById(userId);
+      }
+    }
+
+    // Generate token
+    const token = generateToken(user.id);
+
+    res.json({
+      success: true,
+      message: 'Đăng nhập Facebook thành công!',
+      data: {
+        user: {
+          id: user.id,
+          username: user.full_name, // Use full_name instead of username for display
+          email: user.email,
+          phone: user.phone,
+          full_name: user.full_name,
+          role: user.role,
+          avatar: user.avatar
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Facebook login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Đăng nhập Facebook thất bại. Vui lòng thử lại sau.'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -478,5 +661,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   verifyToken,
-  logout
+  logout,
+  googleLogin,
+  facebookLogin
 };

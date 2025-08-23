@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FaTimes, FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
 import { toast } from "react-toastify";
+import SocialLogin from "./SocialLogin";
 
 const LoginPopup = ({ isOpen, onClose }) => {
   const { login } = useContext(AuthContext);
@@ -116,6 +117,11 @@ const LoginPopup = ({ isOpen, onClose }) => {
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
           </form>
+
+          {/* Social Login */}
+          <div className="mt-6">
+            <SocialLogin onSuccess={() => onClose()} onClose={onClose} />
+          </div>
 
           {/* Links */}
           <div className="mt-6 text-center space-y-2">

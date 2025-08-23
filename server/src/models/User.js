@@ -83,17 +83,20 @@ class User {
   // Update user profile
   static async updateProfile(id, updateData) {
     try {
-      const { full_name, phone, birth_date, address } = updateData;
+      const { full_name, email, phone, gender, birth_date, address, avatar } = updateData;
       
       // Convert undefined values to null for database
       const safeFullName = full_name || null;
+      const safeEmail = email || null;
       const safePhone = phone || null;
+      const safeGender = gender || null;
       const safeBirthDate = birth_date || null;
       const safeAddress = address || null;
+      const safeAvatar = avatar || null;
       
       const [result] = await db.pool.execute(
-        'UPDATE users SET full_name = ?, phone = ?, birth_date = ?, address = ?, updated_at = NOW() WHERE id = ?',
-        [safeFullName, safePhone, safeBirthDate, safeAddress, id]
+        'UPDATE users SET full_name = ?, email = ?, phone = ?, gender = ?, birth_date = ?, address = ?, avatar = ?, updated_at = NOW() WHERE id = ?',
+        [safeFullName, safeEmail, safePhone, safeGender, safeBirthDate, safeAddress, safeAvatar, id]
       );
       
       return result.affectedRows > 0;
@@ -279,6 +282,100 @@ class User {
       );
       
       return result.affectedRows > 0;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Find user by Google ID
+  static async findByGoogleId(googleId) {
+    try {
+      const [rows] = await db.pool.execute(
+        'SELECT * FROM users WHERE google_id = ? AND is_active = 1',
+        [googleId]
+      );
+      
+      return rows[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Find user by Facebook ID
+  static async findByFacebookId(facebookId) {
+    try {
+      const [rows] = await db.pool.execute(
+        'SELECT * FROM users WHERE facebook_id = ? AND is_active = 1',
+        [facebookId]
+      );
+      
+      return rows[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Create or update user with social login
+  static async createOrUpdateSocialUser(socialData) {
+    try {
+      const { email, full_name, google_id, facebook_id, avatar } = socialData;
+      
+      // Check if user exists by email
+      const existingUser = await this.findByEmail(email);
+      
+      if (existingUser) {
+        // Update existing user with social ID
+        const updateFields = [];
+        const updateValues = [];
+        
+        if (google_id && !existingUser.google_id) {
+          updateFields.push('google_id = ?');
+          updateValues.push(google_id);
+        }
+        
+        if (facebook_id && !existingUser.facebook_id) {
+          updateFields.push('facebook_id = ?');
+          updateValues.push(facebook_id);
+        }
+        
+        if (avatar && avatar !== existingUser.avatar) {
+          updateFields.push('avatar = ?');
+          updateValues.push(avatar);
+        }
+        
+        if (updateFields.length > 0) {
+          updateValues.push(existingUser.id);
+          const [result] = await db.pool.execute(
+            `UPDATE users SET ${updateFields.join(', ')}, updated_at = NOW() WHERE id = ?`,
+            updateValues
+          );
+        }
+        
+        return existingUser.id;
+      } else {
+        // Create new user with better username generation
+        let baseUsername = email.split('@')[0];
+        
+        // Clean username - remove special characters and limit length
+        baseUsername = baseUsername.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        baseUsername = baseUsername.substring(0, 15); // Limit to 15 characters
+        
+        // Add random suffix to ensure uniqueness
+        const randomSuffix = Math.random().toString(36).substring(2, 6);
+        const username = `${baseUsername}${randomSuffix}`;
+        
+        // Generate a random password for social login users
+        const crypto = require('crypto');
+        const randomPassword = crypto.randomBytes(32).toString('hex');
+        
+        const [result] = await db.pool.execute(
+          `INSERT INTO users (username, email, password, full_name, google_id, facebook_id, avatar, role, is_active, created_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'user', 1, NOW())`,
+          [username, email, randomPassword, full_name, google_id || null, facebook_id || null, avatar || null]
+        );
+        
+        return result.insertId;
+      }
     } catch (error) {
       throw error;
     }

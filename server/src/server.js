@@ -29,7 +29,7 @@ const server = http.createServer(app);
 // Socket.IO setup
 const io = socketIo(server, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'https://localhost:5173', 'http://localhost:5174', 'https://localhost:5174', 'http://localhost:3000'],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -42,7 +42,14 @@ app.set('io', io);
 app.use(helmet());
 
 // CORS configuration
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'https://localhost:5173',
+  'http://localhost:5174',
+  'https://localhost:5174',
+  'http://localhost:3000',
+  'https://localhost:3000'
+];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -123,6 +130,10 @@ app.use('/api/chat', chatRoutes);
 // Chatbot routes
 const chatbotRoutes = require('./routes/chatbot');
 app.use('/api/chatbot', chatbotRoutes);
+
+// Placeholder image routes
+const placeholderRoutes = require('./routes/placeholder');
+app.use('/api/placeholder', placeholderRoutes);
 
 // Socket.IO chat handling
 const activeUsers = new Map();

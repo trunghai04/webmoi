@@ -1,6 +1,7 @@
 import React, { useContext, useState } from "react";
 import { FaSearch, FaEye, FaShoppingBag, FaTruck, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import { AuthContext } from "../../../context/AuthContext";
+import { getProductImage, handleImageError } from "../../../utils/imageUtils";
 
 const Orders = () => {
   const { user } = useContext(AuthContext);
@@ -19,7 +20,7 @@ const Orders = () => {
           name: 'iPhone 15 Pro Max 256GB',
           price: 1200000,
           quantity: 1,
-          image: '/api/placeholder/80/80'
+          image: getProductImage('/api/placeholder/80/80', 80, 80)
         }
       ],
       address: 'Số 123, Đường ABC, Quận 1, TP.HCM'
@@ -34,7 +35,7 @@ const Orders = () => {
           name: 'Samsung Galaxy Watch 6',
           price: 800000,
           quantity: 1,
-          image: '/api/placeholder/80/80'
+          image: getProductImage('/api/placeholder/80/80', 80, 80)
         }
       ],
       address: 'Số 456, Đường XYZ, Quận 2, TP.HCM'
@@ -49,7 +50,7 @@ const Orders = () => {
           name: 'MacBook Air M2 13inch',
           price: 2000000,
           quantity: 1,
-          image: '/api/placeholder/80/80'
+          image: getProductImage('/api/placeholder/80/80', 80, 80)
         }
       ],
       address: 'Số 789, Đường DEF, Quận 3, TP.HCM'
@@ -64,7 +65,7 @@ const Orders = () => {
           name: 'AirPods Pro 2nd Gen',
           price: 400000,
           quantity: 1,
-          image: '/api/placeholder/80/80'
+          image: getProductImage('/api/placeholder/80/80', 80, 80)
         }
       ],
       address: 'Số 101, Đường GHI, Quận 4, TP.HCM'
@@ -215,6 +216,7 @@ const Orders = () => {
                         src={item.image} 
                         alt={item.name}
                         className="w-16 h-16 object-cover rounded-lg"
+                        onError={(e) => handleImageError(e, getProductImage(null, 80, 80))}
                       />
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-800">{item.name}</h4>

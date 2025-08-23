@@ -13,7 +13,9 @@ CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) UNIQUE NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
+  password VARCHAR(255),
+  google_id VARCHAR(255) UNIQUE,
+  facebook_id VARCHAR(255) UNIQUE,
   full_name VARCHAR(100) NOT NULL,
   phone VARCHAR(20),
   address TEXT,
@@ -25,12 +27,14 @@ CREATE TABLE users (
   email_verified BOOLEAN DEFAULT FALSE,
   reset_token VARCHAR(255),
   reset_token_expires TIMESTAMP NULL,
-  notification_settings JSON DEFAULT '{"email": true, "sms": false, "push": true}',
+  notification_settings JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_email (email),
   INDEX idx_username (username),
-  INDEX idx_role (role)
+  INDEX idx_role (role),
+  INDEX idx_google_id (google_id),
+  INDEX idx_facebook_id (facebook_id)
 );
 
 -- =====================================================

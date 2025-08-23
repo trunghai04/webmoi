@@ -1,20 +1,39 @@
-import React, { createContext, useState, useMemo, useEffect } from "react";
+import React, { createContext, useState, useMemo, useEffect, useCallback } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const AuthContext = createContext({
+const AuthContext = createContext({
   isAuthenticated: false,
   isReady: false,
   user: null,
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  facebookLogin: async () => {},
+  googleLogin: async () => {},
+  checkAuthStatus: async () => {},
+  updateUser: () => {},
 });
+
+export { AuthContext };
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Update user function
+  const updateUser = useCallback((newUserData) => {
+    setUser(newUserData);
+    const stored = localStorage.getItem("msv_auth");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      localStorage.setItem("msv_auth", JSON.stringify({ 
+        ...parsed, 
+        user: newUserData 
+      }));
+    }
+  }, []);
 
   // Load from localStorage on mount and verify token
   useEffect(() => {
@@ -50,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     loadAuth();
   }, []);
 
-  const login = async (emailOrPhone, password) => {
+  const login = useCallback(async (emailOrPhone, password) => {
     if (!emailOrPhone || !password) {
       throw new Error("Email/Số điện thoại và mật khẩu không được để trống");
     }
@@ -93,9 +112,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("msv_auth", JSON.stringify({ token, user: loggedInUser }));
     localStorage.setItem("token", token);
     return loggedInUser;
-  };
+  }, []);
 
-  const register = async (userData) => {
+  const register = useCallback(async (userData) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     let res;
@@ -124,18 +143,100 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data?.message || 'Đăng ký thất bại');
     }
     return data.data;
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     console.log('Logging out user');
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem("msv_auth");
     localStorage.removeItem("token");
-  };
+  }, []);
+
+  // Facebook Login Function
+  const facebookLogin = useCallback(async (accessToken, userID) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/api/auth/facebook-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken, userID }),
+        signal: controller.signal
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === 'AbortError') {
+        throw new Error('Máy chủ không phản hồi, vui lòng thử lại.');
+      }
+      throw new Error('Không thể kết nối máy chủ.');
+    }
+    clearTimeout(timeoutId);
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Phản hồi không hợp lệ từ máy chủ');
+    }
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.message || 'Đăng nhập Facebook thất bại');
+    }
+    const token = data?.data?.token;
+    const loggedInUser = data?.data?.user;
+    if (!token || !loggedInUser) {
+      throw new Error("Phản hồi không hợp lệ từ máy chủ");
+    }
+    setIsAuthenticated(true);
+    setUser(loggedInUser);
+    localStorage.setItem("msv_auth", JSON.stringify({ token, user: loggedInUser }));
+    localStorage.setItem("token", token);
+    return loggedInUser;
+  }, []);
+
+  // Google Login Function
+  const googleLogin = useCallback(async (accessToken, userID, userName, userEmail, userPicture) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/api/auth/google-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken, userID, userName, userEmail, userPicture }),
+        signal: controller.signal
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (e.name === 'AbortError') {
+        throw new Error('Máy chủ không phản hồi, vui lòng thử lại.');
+      }
+      throw new Error('Không thể kết nối máy chủ.');
+    }
+    clearTimeout(timeoutId);
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('Phản hồi không hợp lệ từ máy chủ');
+    }
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.message || 'Đăng nhập Google thất bại');
+    }
+    const token = data?.data?.token;
+    const loggedInUser = data?.data?.user;
+    if (!token || !loggedInUser) {
+      throw new Error("Phản hồi không hợp lệ từ máy chủ");
+    }
+    setIsAuthenticated(true);
+    setUser(loggedInUser);
+    localStorage.setItem("msv_auth", JSON.stringify({ token, user: loggedInUser }));
+    localStorage.setItem("token", token);
+    return loggedInUser;
+  }, []);
 
   // Function to check if token is still valid
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -166,11 +267,22 @@ export const AuthProvider = ({ children }) => {
       console.error('Error checking auth status:', error);
       return false;
     }
-  };
+  }, [logout]);
 
   const value = useMemo(
-    () => ({ isAuthenticated, isReady, user, login, register, logout, checkAuthStatus }),
-    [isAuthenticated, isReady, user]
+    () => ({ 
+      isAuthenticated, 
+      isReady, 
+      user, 
+      login, 
+      register, 
+      logout, 
+      facebookLogin,
+      googleLogin,
+      checkAuthStatus,
+      updateUser
+    }),
+    [isAuthenticated, isReady, user, login, register, logout, facebookLogin, googleLogin, checkAuthStatus, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

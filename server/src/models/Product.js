@@ -8,7 +8,7 @@ class Product {
       const safeOffset = Math.max(0, (Math.max(1, Number(page) || 1) - 1) * safeLimit);
       let query = `
         SELECT p.*, c.name as category_name, 
-               COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
+               '/uploads/products/default.svg' as primary_image
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE p.is_active = 1
@@ -57,6 +57,9 @@ class Product {
       
       query += ` LIMIT ${safeLimit} OFFSET ${safeOffset}`;
       
+      console.log('Product getAll query:', query);
+      console.log('Product getAll params:', params);
+      
       const [rows] = await db.pool.execute(query, params);
       
       // Get total count
@@ -100,6 +103,8 @@ class Product {
       const [countResult] = await db.pool.execute(countQuery, countParams);
       const total = countResult[0].total;
       
+      console.log('Product getAll result:', { products: rows.length, total });
+      
       return {
         products: rows,
         pagination: {
@@ -110,6 +115,7 @@ class Product {
         }
       };
     } catch (error) {
+      console.error('Product getAll error:', error);
       throw error;
     }
   }
@@ -214,7 +220,7 @@ class Product {
     try {
       const [rows] = await db.pool.execute(`
         SELECT p.*, c.name as category_name,
-               COALESCE((SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1), '/uploads/products/default.svg') as primary_image
+               COALESCE(p.main_image, '/uploads/products/default.svg') as primary_image
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE p.is_flash_sale = 1 

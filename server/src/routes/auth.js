@@ -8,6 +8,8 @@ const { uploadAvatar, handleUploadError } = require('../middleware/upload');
 // Public routes
 router.post('/register', validationRules.register, handleValidationErrors, authController.register);
 router.post('/login', validationRules.login, handleValidationErrors, authController.login);
+router.post('/google-login', authController.googleLogin);
+router.post('/facebook-login', authController.facebookLogin);
 router.post('/forgot-password', validationRules.forgotPassword, handleValidationErrors, authController.forgotPassword);
 router.post('/reset-password', validationRules.resetPassword, handleValidationErrors, authController.resetPassword);
 

@@ -5,7 +5,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'Dangtrunghai2402@',
-  database: process.env.DB_NAME || 'muasamviet_db',
+  database: process.env.DB_NAME || 'muasamviet',
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,

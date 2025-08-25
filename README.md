@@ -1,197 +1,253 @@
 # MuaSamViet - E-commerce Platform
 
-A modern e-commerce platform built with React, Node.js, and MySQL.
+Một nền tảng thương mại điện tử hoàn chỉnh với hệ thống người bán (Seller) tích hợp, được xây dựng bằng React, Node.js và MySQL.
 
-## 🚀 Features
+## 🚀 Tính năng chính
 
-### Frontend (React + Vite)
-- **Modern UI/UX** with TailwindCSS
-- **Responsive Design** for all devices
-- **Flash Sale System** with countdown timer
-- **User Authentication** with JWT
-- **Shopping Cart** functionality
-- **Product Search** and filtering
-- **User Profile Management** with avatar upload
-- **Order History** and tracking
-- **Real-time Notifications**
+### 👥 Hệ thống người dùng
+- **Đăng ký/Đăng nhập**: Email, số điện thoại, Google, Facebook
+- **Hồ sơ người dùng**: Cập nhật thông tin, avatar, địa chỉ
+- **Phân quyền**: User, Admin, Partner (Người bán)
 
-### Backend (Node.js + Express)
-- **RESTful API** with proper error handling
-- **JWT Authentication** middleware
-- **File Upload** for images and avatars
-- **Database Integration** with MySQL
-- **Flash Sale Management**
-- **Product Management** system
-- **User Profile Updates**
+### 🏪 Hệ thống người bán (Seller)
+- **Đăng ký người bán**: Form 5 bước với validation đầy đủ
+- **Dashboard người bán**: Thống kê, quản lý sản phẩm, đơn hàng
+- **Quản lý cửa hàng**: Thông tin shop, logo, banner
+- **Quy trình duyệt**: Admin duyệt đơn đăng ký người bán
 
-### Database (MySQL)
-- **User Management** with profile fields
-- **Product Catalog** with categories
-- **Flash Sale Products** with timing
-- **Order Management** system
-- **Image Handling** with placeholders
+### 🛍️ Thương mại điện tử
+- **Danh mục sản phẩm**: Phân cấp, tìm kiếm, lọc
+- **Giỏ hàng**: Thêm, xóa, cập nhật số lượng
+- **Đặt hàng**: Checkout, thanh toán, theo dõi đơn hàng
+- **Đánh giá**: Review sản phẩm, rating
+- **Yêu thích**: Wishlist, theo dõi sản phẩm
 
-## 🛠️ Installation
+### 💬 Hỗ trợ khách hàng
+- **Chat real-time**: Socket.IO, chat với người bán/admin
+- **Thông báo**: Push notification, email
+- **Phản hồi**: Form góp ý, khiếu nại
+- **Hỗ trợ**: Ticket system
 
-### Prerequisites
-- Node.js (v16+)
-- MySQL (v8.0+)
-- npm or yarn
+### 🎯 Marketing & Khuyến mãi
+- **Banner**: Quản lý banner quảng cáo
+- **Voucher**: Mã giảm giá, khuyến mãi
+- **Điểm tích lũy**: Coins, loyalty program
+- **Flash sale**: Chương trình giảm giá
 
-### Setup
+### 📊 Admin Dashboard
+- **Thống kê**: Doanh thu, đơn hàng, người dùng
+- **Quản lý**: Sản phẩm, danh mục, đơn hàng
+- **Duyệt người bán**: Xử lý đơn đăng ký
+- **Broadcast**: Gửi thông báo toàn hệ thống
 
-1. **Clone the repository**
+## 🛠️ Công nghệ sử dụng
+
+### Frontend
+- **React 18** - UI Framework
+- **React Router** - Routing
+- **Tailwind CSS** - Styling
+- **React Icons** - Icons
+- **React Toastify** - Notifications
+- **Socket.IO Client** - Real-time communication
+
+### Backend
+- **Node.js** - Runtime
+- **Express.js** - Web framework
+- **MySQL** - Database
+- **JWT** - Authentication
+- **Socket.IO** - Real-time
+- **Multer** - File upload
+- **Nodemailer** - Email service
+
+### Database
+- **MySQL 8.0+** - Relational database
+- **Foreign Keys** - Data integrity
+- **Indexes** - Performance optimization
+- **JSON columns** - Flexible data storage
+
+## 📦 Cài đặt
+
+### Yêu cầu hệ thống
+- Node.js 18+
+- MySQL 8.0+
+- Git
+
+### 1. Clone repository
 ```bash
 git clone https://github.com/trunghai04/MuaSamViet.git
 cd MuaSamViet
 ```
 
-2. **Install dependencies**
+### 2. Cài đặt dependencies
 ```bash
-# Install client dependencies
+# Frontend
 cd client
 npm install
 
-# Install server dependencies
+# Backend
 cd ../server
 npm install
 ```
 
-3. **Database Setup**
+### 3. Cấu hình database
 ```bash
-# Create database
+# Tạo database
 mysql -u root -p
-CREATE DATABASE muasamviet;
-USE muasamviet;
+CREATE DATABASE muasamviet_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # Import schema
-mysql -u root -p muasamviet < muasamviet_database.sql
+mysql -u root -p muasamviet_db < muasamviet_database.sql
 ```
 
-4. **Environment Configuration**
+### 4. Cấu hình environment
 ```bash
-# Server environment
+# Backend (.env)
 cd server
 cp env.example .env
-# Edit .env with your database credentials
-
-# Client environment
-cd ../client
-# Create .env if needed for API URL
 ```
 
-5. **Run the application**
+Chỉnh sửa `.env`:
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=muasamviet_db
+JWT_SECRET=your_jwt_secret
+EMAIL_HOST=smtp.gmail.com
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+```
+
+### 5. Chạy ứng dụng
 ```bash
-# Start server (from server directory)
+# Terminal 1 - Backend
+cd server
 npm start
 
-# Start client (from client directory)
+# Terminal 2 - Frontend
+cd client
 npm run dev
 ```
 
-## 📁 Project Structure
+Truy cập: http://localhost:5173
+
+## 📁 Cấu trúc project
 
 ```
 MuaSamViet/
-├── client/                 # React frontend
+├── client/                 # Frontend React
 │   ├── src/
 │   │   ├── components/     # Reusable components
 │   │   ├── pages/         # Page components
-│   │   ├── context/       # React context
-│   │   ├── utils/         # Utility functions
-│   │   └── config/        # Configuration files
-│   └── public/            # Static assets
-├── server/                # Node.js backend
+│   │   │   ├── admin/     # Admin pages
+│   │   │   ├── partner/   # Seller pages
+│   │   │   └── user/      # User pages
+│   │   ├── context/       # React Context
+│   │   ├── hooks/         # Custom hooks
+│   │   └── utils/         # Utilities
+│   └── public/            # Static files
+├── server/                # Backend Node.js
 │   ├── src/
 │   │   ├── controllers/   # Route controllers
 │   │   ├── models/        # Database models
 │   │   ├── routes/        # API routes
 │   │   ├── middleware/    # Custom middleware
-│   │   └── config/        # Configuration files
+│   │   └── config/        # Configuration
 │   └── uploads/           # File uploads
-└── docs/                  # Documentation
+├── muasamviet_database.sql # Complete database schema
+└── README.md
 ```
 
-## 🔧 Key Features
+## 🔐 API Endpoints
 
-### Flash Sale System
-- Real-time countdown timer
-- Dynamic product pricing
-- Stock management
-- Multiple time slots
+### Authentication
+- `POST /api/auth/register` - Đăng ký
+- `POST /api/auth/login` - Đăng nhập
+- `POST /api/auth/google-login` - Google OAuth
+- `POST /api/auth/facebook-login` - Facebook OAuth
+- `GET /api/auth/verify` - Verify token
+- `PUT /api/auth/profile` - Cập nhật hồ sơ
+- `PUT /api/auth/avatar` - Upload avatar
 
-### User Management
-- Profile updates with avatar
-- Address and personal info
-- Order history tracking
-- Account settings
+### Partner/Seller
+- `POST /api/partner/apply` - Đăng ký người bán
+- `GET /api/partner/status` - Trạng thái đơn đăng ký
+- `GET /api/partner/store` - Thông tin cửa hàng
+- `PUT /api/partner/store` - Cập nhật cửa hàng
 
-### Product Management
-- Category-based organization
-- Search and filtering
-- Image handling with fallbacks
-- Stock tracking
+### Products & Orders
+- `GET /api/products` - Danh sách sản phẩm
+- `GET /api/products/:id` - Chi tiết sản phẩm
+- `POST /api/cart` - Thêm vào giỏ hàng
+- `POST /api/orders` - Tạo đơn hàng
+- `GET /api/orders` - Danh sách đơn hàng
+
+### Admin
+- `GET /api/admin/dashboard/stats` - Thống kê dashboard
+- `POST /api/admin/users/:id/role` - Cập nhật role
+- `POST /api/admin/partner/approve` - Duyệt người bán
+
+## 👥 Tài khoản mẫu
+
+### Admin
+- Username: `admin`
+- Password: `123456`
+- Email: `admin@muasamviet.com`
+
+### User thường
+- Username: `user1`
+- Password: `123456`
+- Email: `user1@example.com`
+
+### Partner
+- Username: `partner1`
+- Password: `123456`
+- Email: `partner1@example.com`
 
 ## 🚀 Deployment
 
-### Production Build
+### Frontend (Vercel/Netlify)
 ```bash
-# Client build
 cd client
 npm run build
-
-# Server setup
-cd ../server
-npm install --production
 ```
 
-### Environment Variables
-- `DB_HOST`: Database host
-- `DB_USER`: Database username
-- `DB_PASSWORD`: Database password
-- `DB_NAME`: Database name
-- `JWT_SECRET`: JWT secret key
-- `PORT`: Server port (default: 5000)
+### Backend (Railway/Heroku)
+```bash
+cd server
+npm start
+```
 
-## 📝 API Endpoints
+### Database (PlanetScale/AWS RDS)
+- Import `muasamviet_database.sql`
+- Cập nhật connection string trong `.env`
 
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/profile` - Get user profile
-- `PUT /api/auth/profile` - Update user profile
-- `PUT /api/auth/avatar` - Upload avatar
+## 🤝 Đóng góp
 
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/flash-sale` - Get flash sale products
-- `GET /api/products/:id` - Get product by ID
-- `GET /api/products/search` - Search products
-
-### Orders
-- `GET /api/orders` - Get user orders
-- `POST /api/orders` - Create new order
-- `GET /api/orders/:id` - Get order details
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+1. Fork project
+2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## 👥 Authors
+## 📞 Liên hệ
 
-- **Trung Hai** - Initial work
+- **Tác giả**: Trung Hải
+- **Email**: trunghai04@gmail.com
+- **GitHub**: [@trunghai04](https://github.com/trunghai04)
 
-## 🙏 Acknowledgments
+## 🙏 Cảm ơn
 
-- React and Vite for the frontend framework
-- Node.js and Express for the backend
-- MySQL for the database
-- TailwindCSS for styling
+- React Team
+- Tailwind CSS
+- Express.js
+- MySQL Community
+- Tất cả contributors
+
+---
+
+**MuaSamViet** - Nền tảng thương mại điện tử Việt Nam 🇻🇳

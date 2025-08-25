@@ -32,8 +32,6 @@ import Banners from "./Banners";
 const AdminDashboard = () => {
   const { user, isReady, logout } = useContext(AuthContext);
   
-  // Debug auth state
-  console.log('AdminDashboard - Auth state:', { user, isReady });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [stats, setStats] = useState({
     totalUsers: 0,

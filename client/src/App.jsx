@@ -13,7 +13,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
-import MyAccount from './pages/user/MyAccount'
+import UnifiedAccount from './pages/UnifiedAccount'
 import Feedback from './pages/feedback/Feedback'
 import Support from './pages/support/Support'
 import Chat from './pages/chat/Chat'
@@ -26,8 +26,21 @@ import 'react-toastify/dist/ReactToastify.css'
 import ChatWidget from './components/ChatWidget'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import PartnerDashboard from './pages/partner/PartnerDashboard'
+import PartnerProducts from './pages/partner/PartnerProducts'
+import AddProduct from './pages/partner/AddProduct'
+import EditProduct from './pages/partner/EditProduct'
+import ProductDetail from './pages/partner/ProductDetail'
+import PartnerOrders from './pages/partner/PartnerOrders'
+import PartnerAnalytics from './pages/partner/PartnerAnalytics'
+import PartnerSettings from './pages/partner/PartnerSettings'
+import PartnerNotifications from './pages/partner/PartnerNotifications'
+import PartnerStore from './pages/partner/PartnerStore'
+import StorePage from './pages/store/StorePage'
+
 import TestCheckout from './pages/TestCheckout'
 import TestBuyNow from './pages/TestBuyNow'
+import TestPartner from './pages/TestPartner'
+import PartnerApplication from './pages/partner/PartnerApplication'
 import OrderDetail from './pages/user/OrderDetail'
 
 
@@ -44,6 +57,7 @@ function App() {
             <Route path="/categories" element={<Categories />} />
             <Route path="/categories/:categoryId" element={<Categories />} />
             <Route path="/shop/:shopId" element={<Shop />} />
+            <Route path="/store/:storeId" element={<StorePage />} />
             <Route path="/flash-sale" element={<FlashSale />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
@@ -53,15 +67,30 @@ function App() {
             <Route path="/auth/register" element={<Register />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
-            <Route path="/user/*" element={<MyAccount />} />
+            <Route path="/account/*" element={<UnifiedAccount />} />
+            <Route path="/user/account/*" element={<UnifiedAccount />} />
             <Route path="/user/orders/:orderId" element={<OrderDetail />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            {/* Partner Routes - Direct Access */}
             <Route path="/partner" element={<PartnerDashboard />} />
+            <Route path="/partner/products" element={<PartnerProducts />} />
+            <Route path="/partner/products/add" element={<AddProduct />} />
+            <Route path="/partner/products/:id" element={<ProductDetail />} />
+            <Route path="/partner/products/:id/edit" element={<EditProduct />} />
+            <Route path="/partner/orders" element={<PartnerOrders />} />
+            <Route path="/partner/analytics" element={<PartnerAnalytics />} />
+            <Route path="/partner/settings" element={<PartnerSettings />} />
+            <Route path="/partner/notifications" element={<PartnerNotifications />} />
+            <Route path="/partner/store" element={<PartnerStore />} />
+
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/support" element={<Support />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/test-checkout" element={<TestCheckout />} />
             <Route path="/test-buy-now" element={<TestBuyNow />} />
+            <Route path="/test-partner" element={<PartnerProducts />} />
+            <Route path="/test-partner-simple" element={<TestPartner />} />
+            <Route path="/partner/apply" element={<PartnerApplication />} />
           </Routes>
           <ChatWidget />
           <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />

@@ -18,9 +18,7 @@ import {
 } from "react-icons/fa";
 import { AuthContext } from "../../context/AuthContext";
 import { CartContext } from "../../context/CartContext";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
-import FloatingActions from "../../components/FloatingActions";
+
 import Profile from "./sections/Profile";
 import Bank from "./sections/Bank";
 import Address from "./sections/Address";
@@ -146,21 +144,7 @@ const MyAccount = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header
-        isScrolled={isScrolled}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        cartItems={cartItems}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        isFixed={true}
-        hideSearch={true}
-        hideLogoShrink={true}
-        hideTopNav={true}
-      />
 
-      {/* Spacer for header */}
-      <div className="h-20 md:h-24 lg:h-32"></div>
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 lg:px-8 py-6">
         {/* Mobile Navigation Toggle */}
@@ -178,7 +162,7 @@ const MyAccount = () => {
         <div className="flex gap-6">
           {/* Left Sidebar */}
           <aside className={`w-64 transition-all duration-300 ${mobileNavOpen ? 'block fixed lg:static inset-0 z-50 bg-white p-4 overflow-y-auto' : 'hidden'} lg:block`}>
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="bg-white rounded-lg shadow-sm p-4">
               {/* User Profile Section */}
               <div className="text-center mb-6 pb-4 border-b border-gray-200">
                 <div className="relative w-20 h-20 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center overflow-hidden">
@@ -277,7 +261,7 @@ const MyAccount = () => {
 
           {/* Main Content */}
           <main className="flex-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
               <Routes>
                 <Route path="account" element={<AccountOverview />} />
                 <Route path="account/profile" element={<Profile />} />
@@ -299,8 +283,7 @@ const MyAccount = () => {
         </div>
       </div>
 
-      <FloatingActions />
-      <Footer />
+
     </div>
   );
 };

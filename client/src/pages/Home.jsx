@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import LoginPopup from "../components/LoginPopup";
+import FloatingActions from "../components/FloatingActions";
 import { 
   FaShoppingCart, 
   FaHeart, 
@@ -591,6 +592,9 @@ const Home = () => {
       </div>
 
       <Footer />
+
+      {/* Floating Actions */}
+      <FloatingActions />
 
       {/* Login Popup */}
       <LoginPopup 

@@ -43,20 +43,13 @@ export const AuthProvider = ({ children }) => {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed?.token && parsed?.user) {
-            console.log('Auth loaded from localStorage:', { token: parsed.token, user: parsed.user });
-            
-            // For now, just load from localStorage without verification
-            // Token verification will be done when making API calls
-            console.log('Loading auth from localStorage without verification');
+            // Load from localStorage without verification; API calls will verify token
             setIsAuthenticated(true);
             setUser(parsed.user);
           } else {
-            console.log('Invalid auth data in localStorage');
             localStorage.removeItem("msv_auth");
             localStorage.removeItem("token");
           }
-        } else {
-          console.log('No auth data in localStorage');
         }
       } catch (error) {
         console.error('Error loading auth from localStorage:', error);
@@ -146,7 +139,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    console.log('Logging out user');
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem("msv_auth");
@@ -240,7 +232,6 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log('No token found, user not authenticated');
         return false;
       }
 
@@ -255,12 +246,10 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          console.log('Token is valid');
           return true;
         }
       }
       
-      console.log('Token is invalid, logging out');
       logout();
       return false;
     } catch (error) {

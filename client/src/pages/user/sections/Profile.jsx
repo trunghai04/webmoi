@@ -85,8 +85,6 @@ const Profile = () => {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      console.log("Saving profile:", formData);
-      
       const token = JSON.parse(localStorage.getItem('msv_auth')).token;
       
       // Upload avatar first if there's a new one

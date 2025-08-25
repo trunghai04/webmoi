@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { sendEmail, emailTemplates } = require('../config/email');
+const { pool } = require('../config/db'); // Added for getCurrentUser
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -650,6 +651,51 @@ const facebookLogin = async (req, res) => {
   }
 };
 
+// Get current user info from database
+const getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const [rows] = await pool.execute(
+      'SELECT id, username, email, phone, full_name, role, avatar, is_active, created_at, updated_at FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = rows[0];
+    
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          full_name: user.full_name,
+          role: user.role,
+          avatar: user.avatar,
+          is_active: user.is_active,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -663,5 +709,6 @@ module.exports = {
   verifyToken,
   logout,
   googleLogin,
-  facebookLogin
+  facebookLogin,
+  getCurrentUser
 };

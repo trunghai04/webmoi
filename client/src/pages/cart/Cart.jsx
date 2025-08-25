@@ -5,6 +5,7 @@ import { CartContext } from "../../context/CartContext";
 import { AuthContext } from "../../context/AuthContext";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import FloatingActions from "../../components/FloatingActions";
 import { toast } from "react-toastify";
 
 
@@ -66,27 +67,19 @@ const Cart = () => {
   };
 
   const handleCheckout = async () => {
-    console.log('handleCheckout called');
-    console.log('isAuthenticated:', isAuthenticated);
-    console.log('isReady:', isReady);
-    console.log('selectedItems:', selectedItems);
-    console.log('cartItems:', cartItems);
     
     if (!isReady) {
-      console.log('Auth not ready yet, waiting...');
       toast.info('Đang kiểm tra đăng nhập...');
       return;
     }
     
     if (!isAuthenticated) {
-      console.log('User not authenticated, redirecting to login');
       toast.error('Vui lòng đăng nhập để mua hàng');
       navigate('/auth/login', { state: { from: '/cart' } });
       return;
     }
     
     if (selectedItems.size === 0) {
-      console.log('No items selected');
       toast.error('Vui lòng chọn sản phẩm để mua hàng');
       return;
     }
@@ -94,14 +87,11 @@ const Cart = () => {
     try {
       // Lọc các sản phẩm đã chọn và chuyển sang checkout
       const selectedItemsList = cartItems.filter(item => selectedItems.has(item.id));
-      console.log('Selected items list:', selectedItemsList);
       
       // Lưu thông tin sản phẩm đã chọn vào localStorage
       localStorage.setItem('checkoutItems', JSON.stringify(selectedItemsList));
-      console.log('Saved to localStorage successfully');
       
       // Chuyển thẳng sang trang checkout
-      console.log('Navigating to checkout...');
       navigate('/checkout');
     } catch (error) {
       console.error('Error in handleCheckout:', error);
@@ -122,10 +112,14 @@ const Cart = () => {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         isFixed={true}
+        hideSearch={true}
+        hideLogoShrink={false}
+        hideTopNav={true}
+        isProfilePage={true}
       />
 
       {/* Spacer for header */}
-      <div className="h-20 md:h-24 lg:h-32"></div>
+      <div className="h-16 md:h-20 lg:h-24"></div>
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 lg:px-8 py-6">
         {/* Page Header */}
@@ -390,6 +384,9 @@ const Cart = () => {
       </div>
 
       <Footer />
+
+      {/* Floating Actions */}
+      <FloatingActions />
     </div>
   );
 };

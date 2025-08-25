@@ -24,38 +24,130 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [socialLoginLoading, setSocialLoginLoading] = useState(false);
 
-  // Handle social login success
-  const handleSocialLoginSuccess = useCallback(() => {
-    setSocialLoginLoading(false);
-    toast.success("Đăng nhập thành công!");
-    // Role-based redirect
-    // Note: Social login user role will be determined by the server
-    navigate('/');
+  // Handle Facebook login
+  const handleFacebookLogin = useCallback(async () => {
+    setSocialLoginLoading(true);
+    
+    try {
+      // Check if Facebook SDK is loaded
+      if (typeof window.FB === 'undefined') {
+        toast.error('Facebook SDK chưa được tải. Vui lòng refresh trang và thử lại.');
+        setSocialLoginLoading(false);
+        return;
+      }
+      
+      window.FB.login((response) => {
+        if (response.authResponse) {
+          // Get user info from Facebook
+          window.FB.api('/me', { fields: 'id,name,email,picture' }, async (userInfo) => {
+            try {
+              // Call backend API
+              const API_BASE = import.meta.env.VITE_API_URL || '';
+              
+              const res = await fetch(`${API_BASE}/api/auth/facebook-login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  accessToken: response.authResponse.accessToken,
+                  userID: userInfo.id
+                })
+              });
+
+              const data = await res.json();
+              
+                              if (data.success) {
+                  toast.success('Đăng nhập Facebook thành công!');
+                  // Handle successful login
+                  localStorage.setItem('token', data.data.token);
+                  localStorage.setItem('msv_auth', JSON.stringify({
+                    token: data.data.token,
+                    user: data.data.user
+                  }));
+                  // Force refresh to update auth state
+                  window.location.href = '/';
+                } else {
+                throw new Error(data.message || 'Đăng nhập thất bại');
+              }
+            } catch (error) {
+              toast.error(error.message || 'Đăng nhập Facebook thất bại');
+            } finally {
+              setSocialLoginLoading(false);
+            }
+          });
+        } else {
+          if (response.status === 'not_authorized') {
+            toast.error('Đăng nhập Facebook bị từ chối');
+          } else {
+            toast.error('Đăng nhập Facebook bị hủy');
+          }
+          setSocialLoginLoading(false);
+        }
+      }, { scope: 'email,public_profile' });
+    } catch (error) {
+      toast.error(error.message || 'Đăng nhập Facebook thất bại');
+      setSocialLoginLoading(false);
+    }
   }, [navigate]);
 
-  const handleSocialLoginError = useCallback((error) => {
-    setSocialLoginLoading(false);
-    console.error('Social login error:', error);
-    
-    // Handle undefined error
-    if (!error) {
-      toast.error("Đăng nhập thất bại! Vui lòng thử lại sau.");
-      return;
-    }
-    
-    // Handle specific error types
-    if (error?.message?.includes('Facebook SDK')) {
-      toast.error('Facebook đăng nhập tạm thời không khả dụng. Vui lòng thử lại sau.');
-    } else if (error?.message?.includes('Google')) {
-      toast.error('Google đăng nhập tạm thời không khả dụng. Vui lòng thử lại sau.');
-    } else {
-      toast.error(error?.message || "Đăng nhập thất bại!");
-    }
-  }, []);
-
-  const handleSocialLoginStart = useCallback(() => {
+  // Handle Google login
+  const handleGoogleLogin = useCallback(async () => {
     setSocialLoginLoading(true);
-  }, []);
+    try {
+      if (!window.google) {
+        throw new Error('Google SDK chưa được tải');
+      }
+
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: '982533581787-djhi8juujp3jsmhv76a3ij7he7jlb0i4.apps.googleusercontent.com',
+        scope: 'email profile',
+        callback: async (response) => {
+          try {
+            // Get user info from Google
+            const userInfo = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`);
+            const userData = await userInfo.json();
+
+            // Call backend API
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/auth/google-login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                accessToken: response.access_token,
+                userID: userData.id,
+                userName: userData.name,
+                userEmail: userData.email,
+                userPicture: userData.picture
+              })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+              toast.success('Đăng nhập Google thành công!');
+              // Handle successful login
+              localStorage.setItem('token', data.data.token);
+              localStorage.setItem('msv_auth', JSON.stringify({
+                token: data.data.token,
+                user: data.data.user
+              }));
+              // Force refresh to update auth state
+              window.location.href = '/';
+            } else {
+              throw new Error(data.message || 'Đăng nhập thất bại');
+            }
+          } catch (error) {
+            toast.error(error.message || 'Đăng nhập Google thất bại');
+          } finally {
+            setSocialLoginLoading(false);
+          }
+        }
+      });
+
+      client.requestAccessToken();
+    } catch (error) {
+      toast.error(error.message || 'Đăng nhập Google thất bại');
+      setSocialLoginLoading(false);
+    }
+  }, [navigate]);
 
   // Handle scroll effect
   useEffect(() => {
@@ -89,14 +181,9 @@ const Login = () => {
     try {
       const loggedInUser = await login(formData.emailOrPhone, formData.password);
       toast.success("Đăng nhập thành công!");
-      // Role-based redirect
-      if (loggedInUser?.role === 'admin') {
-        navigate('/admin');
-      } else if (loggedInUser?.role === 'partner') {
-        navigate('/partner');
-      } else {
-        navigate('/');
-      }
+      
+      // Force refresh to update auth state
+      window.location.href = '/';
     } catch (error) {
       if (error.message.includes('Too many requests')) {
         toast.error("Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút!");
@@ -120,12 +207,13 @@ const Login = () => {
         setSearchQuery={setSearchQuery}
         isFixed={true}
         hideSearch={true}
-        hideLogoShrink={true}
+        hideLogoShrink={false}
         hideTopNav={true}
+        isProfilePage={true}
       />
 
       {/* Spacer for header */}
-      <div className="h-20 md:h-24 lg:h-32"></div>
+      <div className="h-16 md:h-20 lg:h-24"></div>
 
       <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -237,19 +325,20 @@ const Login = () => {
             </form>
 
             <div className="mt-6">
-              <div className="relative">
+              {/* <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300" />
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-white text-gray-500">Hoặc đăng nhập với</span>
                 </div>
-              </div>
+              </div> */}
 
               <div className="mt-6">
                 <SocialLogin 
-                  onSuccess={handleSocialLoginSuccess}
-                  onClose={handleSocialLoginError}
+                  onFacebookLogin={handleFacebookLogin}
+                  onGoogleLogin={handleGoogleLogin}
+                  isLoading={socialLoginLoading}
                 />
               </div>
             </div>

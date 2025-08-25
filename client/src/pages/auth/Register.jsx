@@ -174,12 +174,13 @@ const Register = () => {
         setSearchQuery={setSearchQuery}
         isFixed={true}
         hideSearch={true}
-        hideLogoShrink={true}
+        hideLogoShrink={false}
         hideTopNav={true}
+        isProfilePage={true}
       />
 
       {/* Spacer for header */}
-      <div className="h-20 md:h-24 lg:h-32"></div>
+      <div className="h-16 md:h-20 lg:h-24"></div>
 
       <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">

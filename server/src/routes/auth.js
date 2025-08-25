@@ -21,5 +21,6 @@ router.put('/avatar', verifyToken, uploadAvatar, handleUploadError, authControll
 router.put('/notification-settings', verifyToken, authController.updateNotificationSettings);
 router.post('/logout', verifyToken, authController.logout);
 router.get('/verify', verifyToken, authController.verifyToken);
+router.get('/current-user', verifyToken, authController.getCurrentUser);
 
 module.exports = router;

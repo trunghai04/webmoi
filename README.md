@@ -1,54 +1,94 @@
-# MuaSamViet - E-commerce Platform
+# 🛒 MuaSamViet - Nền tảng Thương mại điện tử Việt Nam
 
 Một nền tảng thương mại điện tử hoàn chỉnh với hệ thống người bán (Seller) tích hợp, được xây dựng bằng React, Node.js và MySQL.
 
-## 🚀 Tính năng chính
+## ✨ Tính năng chính
 
-### 👥 Hệ thống người dùng
-- **Đăng ký/Đăng nhập**: Email, số điện thoại, Google, Facebook
-- **Hồ sơ người dùng**: Cập nhật thông tin, avatar, địa chỉ
-- **Phân quyền**: User, Admin, Partner (Người bán)
+### 🛍️ E-commerce
+- **Quản lý sản phẩm** - Thêm, sửa, xóa sản phẩm với hình ảnh
+- **Giỏ hàng thông minh** - Lưu trữ và quản lý giỏ hàng
+- **Đặt hàng** - Quy trình đặt hàng hoàn chỉnh
+- **Thanh toán** - Tích hợp VNPay và các cổng thanh toán
+- **Flash Sale** - Chương trình khuyến mãi đặc biệt
+- **Đánh giá sản phẩm** - Hệ thống review và rating
 
-### 🏪 Hệ thống người bán (Seller)
-- **Đăng ký người bán**: Form 5 bước với validation đầy đủ
-- **Dashboard người bán**: Thống kê, quản lý sản phẩm, đơn hàng
-- **Quản lý cửa hàng**: Thông tin shop, logo, banner
-- **Quy trình duyệt**: Admin duyệt đơn đăng ký người bán
+### 👥 Hệ thống người bán (Partner)
+- **Đăng ký người bán** - Quy trình xét duyệt
+- **Quản lý cửa hàng** - Dashboard riêng cho từng seller
+- **Quản lý đơn hàng** - Theo dõi và xử lý đơn hàng
+- **Thống kê bán hàng** - Báo cáo doanh thu và hiệu suất
+- **Quản lý sản phẩm** - CRUD sản phẩm của riêng mình
 
-### 🛍️ Thương mại điện tử
-- **Danh mục sản phẩm**: Phân cấp, tìm kiếm, lọc
-- **Giỏ hàng**: Thêm, xóa, cập nhật số lượng
-- **Đặt hàng**: Checkout, thanh toán, theo dõi đơn hàng
-- **Đánh giá**: Review sản phẩm, rating
-- **Yêu thích**: Wishlist, theo dõi sản phẩm
+### 🔐 Xác thực & Bảo mật
+- **Đăng nhập/Đăng ký** - Hệ thống xác thực JWT
+- **Social Login** - Google, Facebook OAuth
+- **Phân quyền** - User, Admin, Partner roles
+- **Bảo mật** - Password hashing, rate limiting
 
-### 💬 Hỗ trợ khách hàng
-- **Chat real-time**: Socket.IO, chat với người bán/admin
-- **Thông báo**: Push notification, email
-- **Phản hồi**: Form góp ý, khiếu nại
-- **Hỗ trợ**: Ticket system
+### 💬 Giao tiếp
+- **Chat real-time** - Hỗ trợ khách hàng
+- **Thông báo** - Push notifications
+- **Email** - Gửi email xác nhận, reset password
 
-### 🎯 Marketing & Khuyến mãi
-- **Banner**: Quản lý banner quảng cáo
-- **Voucher**: Mã giảm giá, khuyến mãi
-- **Điểm tích lũy**: Coins, loyalty program
-- **Flash sale**: Chương trình giảm giá
+### 🎨 Giao diện
+- **Responsive Design** - Tương thích mọi thiết bị
+- **Modern UI/UX** - Thiết kế hiện đại với TailwindCSS
+- **Dark/Light Mode** - Chế độ tối/sáng
+- **Animations** - Hiệu ứng mượt mà với Framer Motion
 
-### 📊 Admin Dashboard
-- **Thống kê**: Doanh thu, đơn hàng, người dùng
-- **Quản lý**: Sản phẩm, danh mục, đơn hàng
-- **Duyệt người bán**: Xử lý đơn đăng ký
-- **Broadcast**: Gửi thông báo toàn hệ thống
+## 🚀 Quick Start
+
+### ⚡ Setup nhanh (5 phút)
+```bash
+# 1. Clone repository
+git clone https://github.com/trunghai04/webmoi.git
+cd webmoi
+
+# 2. Cài đặt dependencies
+npm run install:all
+
+# 3. Setup database
+mysql -u root -p
+CREATE DATABASE muasamviet CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+mysql -u root -p muasamviet < muasamviet_database.sql
+
+# 4. Cấu hình environment
+cd server && cp env.example .env
+cd ../client && cp env.example .env
+
+# 5. Chạy ứng dụng
+npm run dev
+```
+
+### 🌐 Truy cập
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:5000
+
+### 👥 Tài khoản test
+- **Admin**: admin@muasamviet.com / 123456
+- **User**: user1@example.com / 123456  
+- **Partner**: partner1@example.com / 123456
+
+## 📚 Hướng dẫn chi tiết
+
+- **[Quick Start Guide](./QUICK_START.md)** - Setup nhanh trong 5 phút
+- **[Setup Guide](./SETUP_GUIDE.md)** - Hướng dẫn chi tiết đầy đủ
+- **[Social Login Setup](./SOCIAL_LOGIN_SETUP.md)** - Cấu hình đăng nhập mạng xã hội
+- **[Store Page Guide](./STORE_PAGE_GUIDE.md)** - Hướng dẫn trang cửa hàng
+- **[Unified System Guide](./UNIFIED_SYSTEM_GUIDE.md)** - Hệ thống thống nhất
 
 ## 🛠️ Công nghệ sử dụng
 
 ### Frontend
-- **React 18** - UI Framework
+- **React 19** - UI Framework
+- **Vite** - Build tool
 - **React Router** - Routing
 - **Tailwind CSS** - Styling
 - **React Icons** - Icons
 - **React Toastify** - Notifications
 - **Socket.IO Client** - Real-time communication
+- **Framer Motion** - Animations
 
 ### Backend
 - **Node.js** - Runtime
@@ -58,6 +98,7 @@ Một nền tảng thương mại điện tử hoàn chỉnh với hệ thống 
 - **Socket.IO** - Real-time
 - **Multer** - File upload
 - **Nodemailer** - Email service
+- **bcryptjs** - Password hashing
 
 ### Database
 - **MySQL 8.0+** - Relational database
@@ -74,29 +115,28 @@ Một nền tảng thương mại điện tử hoàn chỉnh với hệ thống 
 
 ### 1. Clone repository
 ```bash
-git clone https://github.com/trunghai04/MuaSamViet.git
-cd MuaSamViet
+git clone https://github.com/trunghai04/webmoi.git
+cd webmoi
 ```
 
 ### 2. Cài đặt dependencies
 ```bash
-# Frontend
-cd client
-npm install
+# Cài đặt tất cả dependencies
+npm run install:all
 
-# Backend
-cd ../server
-npm install
+# Hoặc cài đặt riêng lẻ
+cd server && npm install
+cd ../client && npm install
 ```
 
 ### 3. Cấu hình database
 ```bash
 # Tạo database
 mysql -u root -p
-CREATE DATABASE muasamviet_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE muasamviet CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # Import schema
-mysql -u root -p muasamviet_db < muasamviet_database.sql
+mysql -u root -p muasamviet < muasamviet_database.sql
 ```
 
 ### 4. Cấu hình environment
@@ -111,7 +151,7 @@ Chỉnh sửa `.env`:
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
-DB_NAME=muasamviet_db
+DB_NAME=muasamviet
 JWT_SECRET=your_jwt_secret
 EMAIL_HOST=smtp.gmail.com
 EMAIL_USER=your_email@gmail.com
@@ -120,13 +160,12 @@ EMAIL_PASS=your_app_password
 
 ### 5. Chạy ứng dụng
 ```bash
-# Terminal 1 - Backend
-cd server
-npm start
-
-# Terminal 2 - Frontend
-cd client
+# Chạy cả frontend và backend
 npm run dev
+
+# Hoặc chạy riêng lẻ
+npm run dev:server  # Terminal 1
+npm run dev:client  # Terminal 2
 ```
 
 Truy cập: http://localhost:5173
@@ -155,6 +194,8 @@ MuaSamViet/
 │   │   └── config/        # Configuration
 │   └── uploads/           # File uploads
 ├── muasamviet_database.sql # Complete database schema
+├── SETUP_GUIDE.md         # Hướng dẫn setup chi tiết
+├── QUICK_START.md         # Setup nhanh
 └── README.md
 ```
 
@@ -212,7 +253,7 @@ cd client
 npm run build
 ```
 
-### Backend (Railway/Heroku)
+### Backend (Railway/Render)
 ```bash
 cd server
 npm start
@@ -222,32 +263,24 @@ npm start
 - Import `muasamviet_database.sql`
 - Cập nhật connection string trong `.env`
 
-## 🤝 Đóng góp
+## 🤝 Contributing
 
-1. Fork project
-2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Liên hệ
+## 📞 Support
 
-- **Tác giả**: Trung Hải
-- **Email**: trunghai04@gmail.com
-- **GitHub**: [@trunghai04](https://github.com/trunghai04)
-
-## 🙏 Cảm ơn
-
-- React Team
-- Tailwind CSS
-- Express.js
-- MySQL Community
-- Tất cả contributors
+- **Email**: support@muasamviet.com
+- **Documentation**: [Wiki](https://github.com/trunghai04/webmoi/wiki)
+- **Issues**: [GitHub Issues](https://github.com/trunghai04/webmoi/issues)
 
 ---
 
-**MuaSamViet** - Nền tảng thương mại điện tử Việt Nam 🇻🇳
+**Made with ❤️ in Vietnam**

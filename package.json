@@ -1,0 +1,41 @@
+{
+  "name": "muasamviet",
+  "version": "1.0.0",
+  "description": "MuaSamViet E-commerce Platform - Complete setup with frontend and backend",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "setup": "bash server/scripts/setup.sh",
+    "test:setup": "node test-setup.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "e-commerce",
+    "react",
+    "nodejs",
+    "mysql",
+    "vietnam"
+  ],
+  "author": "MuaSamViet Team",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trunghai04/webmoi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trunghai04/webmoi/issues"
+  },
+  "homepage": "https://github.com/trunghai04/webmoi#readme"
+}

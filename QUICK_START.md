@@ -1,48 +1,43 @@
 # ⚡ Quick Start Guide - MuaSamViet
 
-## 🚀 Setup trong 5 phút
+## 🚀 **Install bằng 1 lệnh duy nhất**
 
-### 1. Clone và cài đặt
+### **Phương án 1: Từ GitHub (Khuyến nghị)**
+```bash
+curl -sSL https://raw.githubusercontent.com/trunghai04/webmoi/main/install.sh | bash
+```
+
+### **Phương án 2: Sau khi clone**
 ```bash
 git clone https://github.com/trunghai04/webmoi.git
 cd webmoi
-npm run install:all
+npm run install:one
 ```
 
-### 2. Setup Database
+### **Phương án 3: Setup thủ công**
 ```bash
-# Tạo database
+# 1. Clone repository
+git clone https://github.com/trunghai04/webmoi.git
+cd webmoi
+
+# 2. Cài đặt dependencies
+npm run install:all
+
+# 3. Setup database
 mysql -u root -p
 CREATE DATABASE muasamviet CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 EXIT;
-
-# Import schema
 mysql -u root -p muasamviet < muasamviet_database.sql
-```
 
-### 3. Cấu hình Environment
-```bash
-# Backend
-cd server
-cp env.example .env
-# Chỉnh sửa .env với thông tin database của bạn
+# 4. Cấu hình environment
+cd server && cp env.example .env
+cd ../client && cp env.example .env
 
-# Frontend  
-cd ../client
-cp env.example .env
-```
-
-### 4. Chạy ứng dụng
-```bash
-# Chạy cả frontend và backend
+# 5. Chạy ứng dụng
 npm run dev
-
-# Hoặc chạy riêng lẻ
-npm run dev:server  # Terminal 1
-npm run dev:client  # Terminal 2
 ```
 
-### 5. Truy cập
+## 🌐 Truy cập
 - **Frontend**: http://localhost:5173
 - **Backend**: http://localhost:5000
 

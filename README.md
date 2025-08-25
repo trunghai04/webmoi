@@ -36,9 +36,23 @@ Một nền tảng thương mại điện tử hoàn chỉnh với hệ thống 
 - **Dark/Light Mode** - Chế độ tối/sáng
 - **Animations** - Hiệu ứng mượt mà với Framer Motion
 
-## 🚀 Quick Start
+## �� Quick Start
 
-### ⚡ Setup nhanh (5 phút)
+### ⚡ **Install bằng 1 lệnh duy nhất**
+
+#### **Phương án 1: Từ GitHub (Khuyến nghị)**
+```bash
+curl -sSL https://raw.githubusercontent.com/trunghai04/webmoi/main/install.sh | bash
+```
+
+#### **Phương án 2: Sau khi clone**
+```bash
+git clone https://github.com/trunghai04/webmoi.git
+cd webmoi
+npm run install:one
+```
+
+#### **Phương án 3: Setup thủ công**
 ```bash
 # 1. Clone repository
 git clone https://github.com/trunghai04/webmoi.git
@@ -196,6 +210,7 @@ MuaSamViet/
 ├── muasamviet_database.sql # Complete database schema
 ├── SETUP_GUIDE.md         # Hướng dẫn setup chi tiết
 ├── QUICK_START.md         # Setup nhanh
+├── install.sh             # One-command installer
 └── README.md
 ```
 
